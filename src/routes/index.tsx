@@ -23,6 +23,12 @@ import {
   Moon,
   Dumbbell,
   Apple,
+  Globe2,
+  Footprints,
+  HeartPulse,
+  Baby,
+  Cigarette,
+  Pill,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -32,13 +38,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Answer a few quick questions about your age, current height, parents' heights, recent growth, sleep, exercise, and nutrition to get a fun estimate of your adult height.",
+          "Answer questions about your age, height, parents, body measurements, growth, and lifestyle to get a fun estimate of your adult height.",
       },
       { property: "og:title", content: "GrowScope — How Tall Will You Be?" },
       {
         property: "og:description",
         content:
-          "Answer a few quick questions about your age, current height, parents' heights, recent growth, sleep, exercise, and nutrition to get a fun estimate of your adult height.",
+          "Answer questions about your age, height, parents, body measurements, growth, and lifestyle to get a fun estimate of your adult height.",
       },
     ],
   }),
@@ -46,334 +52,319 @@ export const Route = createFileRoute("/")({
 });
 
 type Unit = "cm" | "ft";
-type Gender = "boy" | "girl";
-type Sleep = "<7" | "7-8" | "8-9" | "9+";
-type Exercise = "none" | "light" | "moderate" | "very";
-type Nutrition = "needs-work" | "okay" | "balanced" | "very-healthy";
+type Gender = "boy" | "girl" | "unknown";
+type Ethnicity =
+  | "european"
+  | "east-asian"
+  | "south-asian"
+  | "south-east-asian"
+  | "african"
+  | "middle-eastern"
+  | "latin-american"
+  | "mixed-other"
+  | "unknown";
+type Sleep = "<7" | "7-8" | "8-9" | "9+" | "unknown";
+type Exercise = "none" | "light" | "moderate" | "very" | "unknown";
+type Nutrition = "needs-work" | "okay" | "balanced" | "very-healthy" | "unknown";
+type StillGrowing = "yes" | "no" | "unknown";
+type GrowthSpurt = "not-yet" | "now" | "done" | "unknown";
+type YesNoUnknown = "yes" | "no" | "unknown";
 
-interface HeightFtIn {
-  ft: string;
-  in: string;
-}
+const UNKNOWN = "unknown" as const;
 
 interface FormState {
-  gender: Gender;
-  age: string;
   unit: Unit;
-  currentHeightCm: string;
-  currentHeightFt: HeightFtIn;
-  momHeightCm: string;
-  momHeightFt: HeightFtIn;
-  dadHeightCm: string;
-  dadHeightFt: HeightFtIn;
-  yearlyGrowthCm: string;
-  yearlyGrowthIn: string;
+  // Highly informative
+  age: string;
+  gender: Gender;
+  ethnicity: Ethnicity;
+  momHeight: string; // raw in current unit (cm or inches-total for ft we use ft.in split? Keep simple: cm or inches total)
+  dadHeight: string;
+  // Body measurements (optional)
+  currentHeight: string;
+  weightKg: string;
+  sittingHeight: string;
+  legLength: string;
+  inseam: string;
+  armSpan: string;
+  shoulderWidth: string;
+  handLength: string;
+  footLength: string;
+  headCircumference: string;
+  // Development
+  spurtAge: string;
+  stillGrowing: StillGrowing;
+  yearlyGrowth: string;
+  growthSpurt: GrowthSpurt;
+  // Lifestyle
   sleep: Sleep;
   exercise: Exercise;
   nutrition: Nutrition;
+  chronicIllness: YesNoUnknown;
+  preterm: YesNoUnknown;
+  smokingPregnancy: YesNoUnknown;
+  hormoneTreatment: YesNoUnknown;
 }
-
-const EMPTY_FT: HeightFtIn = { ft: "", in: "" };
 
 const initialForm: FormState = {
-  gender: "boy",
-  age: "",
   unit: "cm",
-  currentHeightCm: "",
-  currentHeightFt: { ...EMPTY_FT },
-  momHeightCm: "",
-  momHeightFt: { ...EMPTY_FT },
-  dadHeightCm: "",
-  dadHeightFt: { ...EMPTY_FT },
-  yearlyGrowthCm: "",
-  yearlyGrowthIn: "",
-  sleep: "7-8",
-  exercise: "light",
-  nutrition: "okay",
+  age: "",
+  gender: "unknown",
+  ethnicity: "unknown",
+  momHeight: "",
+  dadHeight: "",
+  currentHeight: "",
+  weightKg: "",
+  sittingHeight: "",
+  legLength: "",
+  inseam: "",
+  armSpan: "",
+  shoulderWidth: "",
+  handLength: "",
+  footLength: "",
+  headCircumference: "",
+  spurtAge: "",
+  stillGrowing: "unknown",
+  yearlyGrowth: "",
+  growthSpurt: "unknown",
+  sleep: "unknown",
+  exercise: "unknown",
+  nutrition: "unknown",
+  chronicIllness: "unknown",
+  preterm: "unknown",
+  smokingPregnancy: "unknown",
+  hormoneTreatment: "unknown",
 };
 
-function ftInToCm(ft: string, inch: string): number {
-  const f = Number.parseFloat(ft) || 0;
-  const i = Number.parseFloat(inch) || 0;
-  return f * 30.48 + i * 2.54;
+// Convert a user-typed length in the chosen unit to centimeters
+function toCm(value: string, unit: Unit): number {
+  const n = Number.parseFloat(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return unit === "cm" ? n : n * 2.54; // ft mode: inputs are inches
 }
 
-function cmToFtIn(cm: number): { ft: number; in: number } {
-  const totalInches = cm / 2.54;
-  const ft = Math.floor(totalInches / 12);
-  const inches = Math.round((totalInches - ft * 12) * 10) / 10;
-  return { ft, in: inches };
+function cmToInches(cm: number): number {
+  return Math.round((cm / 2.54) * 10) / 10;
 }
 
 function formatHeight(cm: number, unit: Unit): string {
-  if (unit === "cm") {
-    return `${Math.round(cm)} cm`;
-  }
-  const { ft, in: inches } = cmToFtIn(cm);
+  if (unit === "cm") return `${Math.round(cm)} cm`;
+  const totalIn = cm / 2.54;
+  const ft = Math.floor(totalIn / 12);
+  const inches = Math.round((totalIn - ft * 12) * 10) / 10;
   return `${ft} ft ${inches} in`;
 }
 
-function formatInches(cm: number): string {
-  const inches = Math.round((cm / 2.54) * 10) / 10;
-  return String(inches);
+function ethnicityAdjust(eth: Ethnicity, gender: Gender): number {
+  // Tiny shift around 0; population-average tendencies
+  const male = gender !== "girl";
+  switch (eth) {
+    case "european":
+      return male ? 1 : 1;
+    case "east-asian":
+      return -1;
+    case "south-asian":
+      return -2;
+    case "south-east-asian":
+      return -2.5;
+    case "african":
+      return 0;
+    case "middle-eastern":
+      return 0;
+    case "latin-american":
+      return -1;
+    case "mixed-other":
+    case "unknown":
+    default:
+      return 0;
+  }
 }
 
-function lifestyleAdjustment(sleep: Sleep, exercise: Exercise, nutrition: Nutrition): number {
-  let adjustment = 0;
-
-  switch (sleep) {
-    case "<7":
-      adjustment -= 0.75;
-      break;
-    case "7-8":
-      adjustment += 0;
-      break;
-    case "8-9":
-    case "9+":
-      adjustment += 0.5;
-      break;
-  }
-
-  switch (exercise) {
-    case "none":
-      adjustment -= 0.5;
-      break;
-    case "light":
-      adjustment += 0;
-      break;
-    case "moderate":
-      adjustment += 0.5;
-      break;
-    case "very":
-      adjustment += 0.75;
-      break;
-  }
-
-  switch (nutrition) {
-    case "needs-work":
-      adjustment -= 0.75;
-      break;
-    case "okay":
-      adjustment += 0;
-      break;
-    case "balanced":
-      adjustment += 0.5;
-      break;
-    case "very-healthy":
-      adjustment += 0.75;
-      break;
-  }
-
-  // Keep the lifestyle effect small and encouraging
-  return Math.max(-2, Math.min(2, adjustment));
-}
-
-function estimateAdultHeight(
-  gender: Gender,
-  age: number,
-  currentCm: number,
-  momCm: number,
-  dadCm: number,
-  yearlyGrowthCm: number,
+function lifestyleAdjustment(
   sleep: Sleep,
   exercise: Exercise,
   nutrition: Nutrition,
-): { estimate: number; min: number; max: number } {
-  // Mid-parental height (target adult height from genetics)
-  const geneticTarget = gender === "boy" ? (momCm + dadCm + 13) / 2 : (momCm + dadCm - 13) / 2;
+  chronic: YesNoUnknown,
+  preterm: YesNoUnknown,
+  smoking: YesNoUnknown,
+  hormones: YesNoUnknown,
+): number {
+  let adj = 0;
+  if (sleep === "<7") adj -= 0.75;
+  if (sleep === "8-9" || sleep === "9+") adj += 0.5;
 
-  // Typical age when growth plates close
-  const stopAge = gender === "boy" ? 18 : 16;
-  const yearsRemaining = Math.max(0, stopAge - age);
+  if (exercise === "none") adj -= 0.5;
+  if (exercise === "moderate") adj += 0.5;
+  if (exercise === "very") adj += 0.75;
 
-  // Project remaining growth with a realistic slowdown each year
-  let remainingGrowth = 0;
-  let growth = yearlyGrowthCm;
+  if (nutrition === "needs-work") adj -= 0.75;
+  if (nutrition === "balanced") adj += 0.5;
+  if (nutrition === "very-healthy") adj += 0.75;
+
+  if (chronic === "yes") adj -= 1.5;
+  if (preterm === "yes") adj -= 0.5;
+  if (smoking === "yes") adj -= 1;
+  if (hormones === "yes") adj += 0.5; // assume beneficial if prescribed
+
+  return Math.max(-4, Math.min(3, adj));
+}
+
+interface Estimate {
+  estimate: number;
+  min: number;
+  max: number;
+}
+
+function estimateAdultHeight(form: FormState): {
+  result: Estimate | null;
+  error: string | null;
+} {
+  const age = Number.parseFloat(form.age);
+  if (!Number.isFinite(age) || age < 2 || age > 25) {
+    return { result: null, error: "Please enter an age between 2 and 25 years." };
+  }
+
+  const unit = form.unit;
+  const currentCm = toCm(form.currentHeight, unit);
+  const momCm = toCm(form.momHeight, unit);
+  const dadCm = toCm(form.dadHeight, unit);
+
+  if (currentCm <= 30) {
+    return { result: null, error: "Please enter your current height." };
+  }
+
+  // Mid-parental height — fall back to population averages when unknown
+  const gender = form.gender;
+  const momEffective = momCm > 0 ? momCm : 165; // population avg
+  const dadEffective = dadCm > 0 ? dadCm : 178;
+  const sexAdjust = gender === "boy" ? 13 : gender === "girl" ? -13 : 0;
+  const geneticTarget = (momEffective + dadEffective + sexAdjust) / 2;
+
+  // Growth projection
+  const stopAge = gender === "boy" ? 18 : gender === "girl" ? 16 : 17;
+  const stillGrowing = form.stillGrowing;
+  let yearsRemaining = Math.max(0, stopAge - age);
+  if (stillGrowing === "no") yearsRemaining = 0;
+  if (form.growthSpurt === "done") yearsRemaining = Math.min(yearsRemaining, 1.5);
+
+  const yearlyCm = toCm(form.yearlyGrowth, unit);
+  const effectiveGrowth = yearlyCm > 0 ? yearlyCm : Math.max(4, 12 - age * 0.5);
+
+  let projected = 0;
+  let g = effectiveGrowth;
   for (let i = 0; i < yearsRemaining; i++) {
-    remainingGrowth += growth;
-    growth *= 0.65;
+    projected += g;
+    g *= 0.65;
+  }
+  // If user is mid-growth-spurt, give a small bump
+  if (form.growthSpurt === "now") projected += 2;
+
+  const growthProjection = currentCm + projected;
+
+  // Optional body-measurement hints
+  const armSpanCm = toCm(form.armSpan, unit);
+  const footLenCm = toCm(form.footLength, unit);
+  const measurementEstimates: number[] = [];
+  if (armSpanCm > 80) {
+    // Arm span ≈ adult height
+    measurementEstimates.push(armSpanCm);
+  }
+  if (footLenCm > 10) {
+    // Foot length ~15% of adult height
+    measurementEstimates.push(footLenCm / 0.152);
   }
 
-  // Very young children: if no recent growth given, use a default based on age
-  const effectiveGrowth = yearlyGrowthCm > 0 ? yearlyGrowthCm : Math.max(4, 12 - age * 0.5);
-  if (yearlyGrowthCm <= 0) {
-    let projected = 0;
-    let g = effectiveGrowth;
-    for (let i = 0; i < yearsRemaining; i++) {
-      projected += g;
-      g *= 0.65;
-    }
-    remainingGrowth = projected;
-  }
-
-  const growthProjection = currentCm + remainingGrowth;
-
-  // Blend: younger kids rely more on genetics; older teens rely more on current trajectory
+  // Blend genetics & growth trajectory
   let geneticWeight = 0.7;
   if (age >= 15) geneticWeight = 0.25;
   else if (age >= 13) geneticWeight = 0.45;
   else if (age >= 11) geneticWeight = 0.6;
   else if (age >= 8) geneticWeight = 0.65;
+  if (momCm <= 0 && dadCm <= 0) geneticWeight = Math.min(geneticWeight, 0.2);
 
-  const baseEstimate = geneticWeight * geneticTarget + (1 - geneticWeight) * growthProjection;
-  const estimate = baseEstimate + lifestyleAdjustment(sleep, exercise, nutrition);
+  let base = geneticWeight * geneticTarget + (1 - geneticWeight) * growthProjection;
 
-  // Uncertainty is larger for younger users and for users without a recent growth number
-  const baseUncertainty = yearlyGrowthCm > 0 ? 6.5 : 8.5;
-  const ageUncertainty = Math.max(0, 16 - age) * 0.35;
-  const range = baseUncertainty + ageUncertainty;
+  if (measurementEstimates.length > 0) {
+    const avgMeas = measurementEstimates.reduce((a, b) => a + b, 0) / measurementEstimates.length;
+    base = base * 0.85 + avgMeas * 0.15;
+  }
+
+  base += ethnicityAdjust(form.ethnicity, gender);
+  base += lifestyleAdjustment(
+    form.sleep,
+    form.exercise,
+    form.nutrition,
+    form.chronicIllness,
+    form.preterm,
+    form.smokingPregnancy,
+    form.hormoneTreatment,
+  );
+
+  // Uncertainty grows when key data is missing
+  let range = yearlyCm > 0 ? 6.5 : 8.5;
+  range += Math.max(0, 16 - age) * 0.35;
+  if (momCm <= 0) range += 2;
+  if (dadCm <= 0) range += 2;
+  if (gender === "unknown") range += 1.5;
 
   return {
-    estimate,
-    min: estimate - range,
-    max: estimate + range,
+    result: { estimate: base, min: base - range, max: base + range },
+    error: null,
   };
 }
 
 function Index() {
   const [form, setForm] = useState<FormState>(initialForm);
-  const [result, setResult] = useState<{ estimate: number; min: number; max: number } | null>(null);
+  const [result, setResult] = useState<Estimate | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const currentHeightCm = useMemo(() => {
-    if (form.unit === "cm") return Number.parseFloat(form.currentHeightCm) || 0;
-    return ftInToCm(form.currentHeightFt.ft, form.currentHeightFt.in);
-  }, [form.unit, form.currentHeightCm, form.currentHeightFt]);
-
-  const momHeightCm = useMemo(() => {
-    if (form.unit === "cm") return Number.parseFloat(form.momHeightCm) || 0;
-    return ftInToCm(form.momHeightFt.ft, form.momHeightFt.in);
-  }, [form.unit, form.momHeightCm, form.momHeightFt]);
-
-  const dadHeightCm = useMemo(() => {
-    if (form.unit === "cm") return Number.parseFloat(form.dadHeightCm) || 0;
-    return ftInToCm(form.dadHeightFt.ft, form.dadHeightFt.in);
-  }, [form.unit, form.dadHeightCm, form.dadHeightFt]);
-
-  const yearlyGrowthCm = useMemo(() => {
-    if (form.unit === "cm") return Number.parseFloat(form.yearlyGrowthCm) || 0;
-    const inches = Number.parseFloat(form.yearlyGrowthIn) || 0;
-    return inches * 2.54;
-  }, [form.unit, form.yearlyGrowthCm, form.yearlyGrowthIn]);
-
-  const updateField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
+  const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => {
+      // When switching units, convert numeric height-like fields
       if (key === "unit" && value !== prev.unit) {
         const newUnit = value as Unit;
-        // Convert current values into the new unit so the user doesn't lose their input
-        const next: FormState = { ...prev, unit: newUnit };
-        if (newUnit === "ft") {
-          next.currentHeightFt =
-            prev.currentHeightCm === ""
-              ? { ...EMPTY_FT }
-              : {
-                  ft: String(cmToFtIn(Number.parseFloat(prev.currentHeightCm) || 0).ft),
-                  in: String(cmToFtIn(Number.parseFloat(prev.currentHeightCm) || 0).in),
-                };
-          next.momHeightFt =
-            prev.momHeightCm === ""
-              ? { ...EMPTY_FT }
-              : {
-                  ft: String(cmToFtIn(Number.parseFloat(prev.momHeightCm) || 0).ft),
-                  in: String(cmToFtIn(Number.parseFloat(prev.momHeightCm) || 0).in),
-                };
-          next.dadHeightFt =
-            prev.dadHeightCm === ""
-              ? { ...EMPTY_FT }
-              : {
-                  ft: String(cmToFtIn(Number.parseFloat(prev.dadHeightCm) || 0).ft),
-                  in: String(cmToFtIn(Number.parseFloat(prev.dadHeightCm) || 0).in),
-                };
-          next.yearlyGrowthIn =
-            prev.yearlyGrowthCm === ""
-              ? ""
-              : formatInches(Number.parseFloat(prev.yearlyGrowthCm) || 0);
-        } else {
-          next.currentHeightCm =
-            prev.currentHeightFt.ft === "" && prev.currentHeightFt.in === ""
-              ? ""
-              : String(Math.round(ftInToCm(prev.currentHeightFt.ft, prev.currentHeightFt.in)));
-          next.momHeightCm =
-            prev.momHeightFt.ft === "" && prev.momHeightFt.in === ""
-              ? ""
-              : String(Math.round(ftInToCm(prev.momHeightFt.ft, prev.momHeightFt.in)));
-          next.dadHeightCm =
-            prev.dadHeightFt.ft === "" && prev.dadHeightFt.in === ""
-              ? ""
-              : String(Math.round(ftInToCm(prev.dadHeightFt.ft, prev.dadHeightFt.in)));
-          next.yearlyGrowthCm =
-            prev.yearlyGrowthIn === ""
-              ? ""
-              : String(Math.round((Number.parseFloat(prev.yearlyGrowthIn) || 0) * 2.54));
-        }
-        return next;
+        const convert = (v: string) => {
+          const n = Number.parseFloat(v);
+          if (!Number.isFinite(n) || n <= 0) return "";
+          return newUnit === "ft"
+            ? String(cmToInches(n)) // cm → inches
+            : String(Math.round(n * 2.54)); // inches → cm
+        };
+        return {
+          ...prev,
+          unit: newUnit,
+          momHeight: convert(prev.momHeight),
+          dadHeight: convert(prev.dadHeight),
+          currentHeight: convert(prev.currentHeight),
+          sittingHeight: convert(prev.sittingHeight),
+          legLength: convert(prev.legLength),
+          inseam: convert(prev.inseam),
+          armSpan: convert(prev.armSpan),
+          shoulderWidth: convert(prev.shoulderWidth),
+          handLength: convert(prev.handLength),
+          footLength: convert(prev.footLength),
+          headCircumference: convert(prev.headCircumference),
+          yearlyGrowth: convert(prev.yearlyGrowth),
+        };
       }
       return { ...prev, [key]: value };
     });
     setError(null);
   }, []);
 
-  const updateFtIn = useCallback(
-    (
-      field: "currentHeightFt" | "momHeightFt" | "dadHeightFt",
-      key: keyof HeightFtIn,
-      value: string,
-    ) => {
-      setForm((prev) => ({
-        ...prev,
-        [field]: { ...prev[field], [key]: value },
-      }));
-      setError(null);
-    },
-    [],
-  );
+  const lenUnit = form.unit === "cm" ? "cm" : "in";
 
-  function handleCalculate() {
-    const age = Number.parseFloat(form.age);
-    if (!Number.isFinite(age) || age < 2 || age > 21) {
-      setError("Please enter an age between 2 and 21 years.");
-      setResult(null);
-      return;
-    }
-    if (currentHeightCm <= 30 || currentHeightCm > 250) {
-      setError("Please enter a realistic current height.");
-      setResult(null);
-      return;
-    }
-    if (momHeightCm <= 30 || momHeightCm > 250 || dadHeightCm <= 30 || dadHeightCm > 250) {
-      setError("Please enter realistic heights for both parents.");
-      setResult(null);
-      return;
-    }
-    if (yearlyGrowthCm < 0 || yearlyGrowthCm > 30) {
-      setError("Please enter a realistic amount of growth in the last year.");
-      setResult(null);
-      return;
-    }
+  const handleCalculate = () => {
+    const { result: r, error: e } = estimateAdultHeight(form);
+    setResult(r);
+    setError(e);
+  };
 
-    setError(null);
-    setResult(
-      estimateAdultHeight(
-        form.gender,
-        age,
-        currentHeightCm,
-        momHeightCm,
-        dadHeightCm,
-        yearlyGrowthCm,
-        form.sleep,
-        form.exercise,
-        form.nutrition,
-      ),
-    );
-  }
-
-  function handleReset() {
+  const handleReset = () => {
     setForm(initialForm);
     setResult(null);
     setError(null);
-  }
-
-  const inputWrapper = "space-y-2";
+  };
 
   return (
     <main className="min-h-screen bg-background px-4 py-12 sm:py-16 lg:py-20">
@@ -385,15 +376,16 @@ function Index() {
             <span>Fun height estimate for kids & teens</span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            How tall will <span className="text-primary">you</span> grow?
+            How <span className="text-primary">tall</span> will you{" "}
+            <span className="text-primary">grow</span>?
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Tell us a few things about yourself and your family, and we'll estimate your adult
-            height. Remember — this is just for fun, not a medical prediction!
+            Answer as many questions as you can — anything you don't know, just pick
+            "I don't know". The more you fill in, the better the estimate.
           </p>
         </div>
 
-        {/* Form card */}
+        {/* Form */}
         <Card className="overflow-hidden border border-border bg-card shadow-xl">
           <CardHeader className="bg-secondary/30 pb-6">
             <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground sm:text-2xl">
@@ -401,10 +393,10 @@ function Index() {
               Your growth profile
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Fill in the details below. You can switch between centimeters and feet/inches.
+              Switch between centimeters and inches. Skip anything you don't know.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6">
+          <CardContent className="space-y-8 pt-6">
             {/* Unit toggle */}
             <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
               <span className="text-sm font-medium text-secondary-foreground">
@@ -415,7 +407,7 @@ function Index() {
                   type="button"
                   variant={form.unit === "cm" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => updateField("unit", "cm")}
+                  onClick={() => update("unit", "cm")}
                 >
                   cm
                 </Button>
@@ -423,349 +415,331 @@ function Index() {
                   type="button"
                   variant={form.unit === "ft" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => updateField("unit", "ft")}
+                  onClick={() => update("unit", "ft")}
                 >
-                  ft/in
+                  inches
                 </Button>
               </div>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2">
-              {/* Gender */}
-              <div className={inputWrapper}>
-                <Label htmlFor="gender" className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
-                  You are
-                </Label>
-                <Select
-                  value={form.gender}
-                  onValueChange={(value) => updateField("gender", value as Gender)}
-                >
-                  <SelectTrigger id="gender" className="bg-background/50">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="boy">A boy</SelectItem>
-                    <SelectItem value="girl">A girl</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Age */}
-              <div className={inputWrapper}>
-                <Label htmlFor="age" className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" />
-                  Your age
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="age"
-                    type="number"
-                    min={2}
-                    max={21}
-                    step={0.1}
-                    placeholder="e.g. 13"
+            {/* Section 1 — Most important */}
+            <Section
+              title="1. Most important"
+              subtitle="These have the biggest impact on the estimate."
+            >
+              <div className="grid gap-6 sm:grid-cols-2">
+                <Field label="Your age" icon={<Activity className="h-4 w-4 text-primary" />}>
+                  <NumberWithSuffix
                     value={form.age}
-                    onChange={(e) => updateField("age", e.target.value)}
-                    className="bg-background/50 pr-14"
+                    onChange={(v) => update("age", v)}
+                    suffix="yrs"
+                    placeholder="e.g. 13"
+                    min={2}
+                    max={25}
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    yrs
-                  </span>
-                </div>
+                </Field>
+
+                <Field label="Gender at birth" icon={<User className="h-4 w-4 text-primary" />}>
+                  <SelectField
+                    value={form.gender}
+                    onChange={(v) => update("gender", v as Gender)}
+                    options={[
+                      { value: "boy", label: "Male" },
+                      { value: "girl", label: "Female" },
+                      { value: UNKNOWN, label: "I don't know / prefer not to say" },
+                    ]}
+                  />
+                </Field>
+
+                <Field
+                  label="Ethnic / regional background"
+                  icon={<Globe2 className="h-4 w-4 text-primary" />}
+                >
+                  <SelectField
+                    value={form.ethnicity}
+                    onChange={(v) => update("ethnicity", v as Ethnicity)}
+                    options={[
+                      { value: "european", label: "European" },
+                      { value: "east-asian", label: "East Asian" },
+                      { value: "south-asian", label: "South Asian" },
+                      { value: "south-east-asian", label: "South-East Asian" },
+                      { value: "african", label: "African" },
+                      { value: "middle-eastern", label: "Middle Eastern" },
+                      { value: "latin-american", label: "Latin American" },
+                      { value: "mixed-other", label: "Mixed / Other" },
+                      { value: UNKNOWN, label: "I don't know" },
+                    ]}
+                  />
+                </Field>
+
+                <Field
+                  label="Your current height"
+                  icon={<Ruler className="h-4 w-4 text-primary" />}
+                >
+                  <NumberWithSuffix
+                    value={form.currentHeight}
+                    onChange={(v) => update("currentHeight", v)}
+                    suffix={lenUnit}
+                    placeholder={form.unit === "cm" ? "e.g. 150" : "e.g. 59"}
+                  />
+                </Field>
+
+                <Field
+                  label="Mom's height"
+                  icon={<Users className="h-4 w-4 text-primary" />}
+                  hint="Leave blank if unknown"
+                >
+                  <NumberWithSuffix
+                    value={form.momHeight}
+                    onChange={(v) => update("momHeight", v)}
+                    suffix={lenUnit}
+                    placeholder={form.unit === "cm" ? "e.g. 165" : "e.g. 65"}
+                  />
+                </Field>
+
+                <Field
+                  label="Dad's height"
+                  icon={<Users className="h-4 w-4 text-primary" />}
+                  hint="Leave blank if unknown"
+                >
+                  <NumberWithSuffix
+                    value={form.dadHeight}
+                    onChange={(v) => update("dadHeight", v)}
+                    suffix={lenUnit}
+                    placeholder={form.unit === "cm" ? "e.g. 180" : "e.g. 71"}
+                  />
+                </Field>
               </div>
+            </Section>
 
-              {/* Current height */}
-              <div className={inputWrapper}>
-                <Label htmlFor="currentHeight" className="flex items-center gap-2">
-                  <Ruler className="h-4 w-4 text-primary" />
-                  Your current height
-                </Label>
-                {form.unit === "cm" ? (
-                  <div className="relative">
-                    <Input
-                      id="currentHeight"
-                      type="number"
-                      min={30}
-                      max={250}
-                      step={0.1}
-                      placeholder="e.g. 150"
-                      value={form.currentHeightCm}
-                      onChange={(e) => updateField("currentHeightCm", e.target.value)}
-                      className="bg-background/50 pr-12"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      cm
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={8}
-                        placeholder="ft"
-                        value={form.currentHeightFt.ft}
-                        onChange={(e) => updateFtIn("currentHeightFt", "ft", e.target.value)}
-                        className="bg-background/50 pr-8"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        ft
-                      </span>
-                    </div>
-                    <div className="relative flex-1">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={11}
-                        step={0.1}
-                        placeholder="in"
-                        value={form.currentHeightFt.in}
-                        onChange={(e) => updateFtIn("currentHeightFt", "in", e.target.value)}
-                        className="bg-background/50 pr-8"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        in
-                      </span>
-                    </div>
-                  </div>
-                )}
+            {/* Section 2 — Body measurements */}
+            <Section
+              title="2. Body measurements"
+              subtitle="Optional — useful if parents' heights are unknown. Arm span ≈ adult height, and foot length tracks adult height well."
+            >
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Weight" icon={<Activity className="h-4 w-4 text-primary" />}>
+                  <NumberWithSuffix
+                    value={form.weightKg}
+                    onChange={(v) => update("weightKg", v)}
+                    suffix={form.unit === "cm" ? "kg" : "lb"}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field label="Sitting height" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                  <NumberWithSuffix
+                    value={form.sittingHeight}
+                    onChange={(v) => update("sittingHeight", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field label="Leg length" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                  <NumberWithSuffix
+                    value={form.legLength}
+                    onChange={(v) => update("legLength", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field label="Inseam" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                  <NumberWithSuffix
+                    value={form.inseam}
+                    onChange={(v) => update("inseam", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field
+                  label="Arm span"
+                  icon={<Ruler className="h-4 w-4 text-primary" />}
+                  hint="Fingertip to fingertip"
+                >
+                  <NumberWithSuffix
+                    value={form.armSpan}
+                    onChange={(v) => update("armSpan", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field label="Shoulder width" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                  <NumberWithSuffix
+                    value={form.shoulderWidth}
+                    onChange={(v) => update("shoulderWidth", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field label="Hand length" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                  <NumberWithSuffix
+                    value={form.handLength}
+                    onChange={(v) => update("handLength", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field
+                  label="Foot length"
+                  icon={<Footprints className="h-4 w-4 text-primary" />}
+                >
+                  <NumberWithSuffix
+                    value={form.footLength}
+                    onChange={(v) => update("footLength", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field
+                  label="Head circumference"
+                  icon={<Ruler className="h-4 w-4 text-primary" />}
+                >
+                  <NumberWithSuffix
+                    value={form.headCircumference}
+                    onChange={(v) => update("headCircumference", v)}
+                    suffix={lenUnit}
+                    placeholder="optional"
+                  />
+                </Field>
               </div>
+            </Section>
 
-              {/* Yearly growth */}
-              <div className={inputWrapper}>
-                <Label htmlFor="yearlyGrowth" className="flex items-center gap-2">
-                  <ArrowUp className="h-4 w-4 text-primary" />
-                  How much you grew last year
-                </Label>
-                {form.unit === "cm" ? (
-                  <div className="relative">
-                    <Input
-                      id="yearlyGrowth"
-                      type="number"
-                      min={0}
-                      max={30}
-                      step={0.1}
-                      placeholder="e.g. 6"
-                      value={form.yearlyGrowthCm}
-                      onChange={(e) => updateField("yearlyGrowthCm", e.target.value)}
-                      className="bg-background/50 pr-12"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      cm
-                    </span>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <Input
-                      id="yearlyGrowth"
-                      type="number"
-                      min={0}
-                      max={12}
-                      step={0.1}
-                      placeholder="e.g. 2.4"
-                      value={form.yearlyGrowthIn}
-                      onChange={(e) => updateField("yearlyGrowthIn", e.target.value)}
-                      className="bg-background/50 pr-12"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      in
-                    </span>
-                  </div>
-                )}
+            {/* Section 3 — Development */}
+            <Section
+              title="3. Growth & development"
+              subtitle="Only relevant if you're still growing."
+            >
+              <div className="grid gap-6 sm:grid-cols-2">
+                <Field
+                  label="Age at growth spurt (if known)"
+                  icon={<ArrowUp className="h-4 w-4 text-primary" />}
+                >
+                  <NumberWithSuffix
+                    value={form.spurtAge}
+                    onChange={(v) => update("spurtAge", v)}
+                    suffix="yrs"
+                    placeholder="optional"
+                  />
+                </Field>
+                <Field
+                  label="Are you still growing?"
+                  icon={<Activity className="h-4 w-4 text-primary" />}
+                >
+                  <SelectField
+                    value={form.stillGrowing}
+                    onChange={(v) => update("stillGrowing", v as StillGrowing)}
+                    options={[
+                      { value: "yes", label: "Yes" },
+                      { value: "no", label: "No, I've stopped" },
+                      { value: UNKNOWN, label: "I don't know" },
+                    ]}
+                  />
+                </Field>
+                <Field
+                  label="How much did you grow last year?"
+                  icon={<ArrowUp className="h-4 w-4 text-primary" />}
+                >
+                  <NumberWithSuffix
+                    value={form.yearlyGrowth}
+                    onChange={(v) => update("yearlyGrowth", v)}
+                    suffix={lenUnit}
+                    placeholder={form.unit === "cm" ? "e.g. 6" : "e.g. 2.4"}
+                  />
+                </Field>
+                <Field
+                  label="Growth spurt status"
+                  icon={<ArrowUp className="h-4 w-4 text-primary" />}
+                >
+                  <SelectField
+                    value={form.growthSpurt}
+                    onChange={(v) => update("growthSpurt", v as GrowthSpurt)}
+                    options={[
+                      { value: "not-yet", label: "Hasn't started yet" },
+                      { value: "now", label: "Happening now" },
+                      { value: "done", label: "Already finished" },
+                      { value: UNKNOWN, label: "I don't know" },
+                    ]}
+                  />
+                </Field>
               </div>
+            </Section>
 
-              {/* Mom height */}
-              <div className={inputWrapper}>
-                <Label htmlFor="momHeight" className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  Mom's height
-                </Label>
-                {form.unit === "cm" ? (
-                  <div className="relative">
-                    <Input
-                      id="momHeight"
-                      type="number"
-                      min={30}
-                      max={250}
-                      step={0.1}
-                      placeholder="e.g. 165"
-                      value={form.momHeightCm}
-                      onChange={(e) => updateField("momHeightCm", e.target.value)}
-                      className="bg-background/50 pr-12"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      cm
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={8}
-                        placeholder="ft"
-                        value={form.momHeightFt.ft}
-                        onChange={(e) => updateFtIn("momHeightFt", "ft", e.target.value)}
-                        className="bg-background/50 pr-8"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        ft
-                      </span>
-                    </div>
-                    <div className="relative flex-1">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={11}
-                        step={0.1}
-                        placeholder="in"
-                        value={form.momHeightFt.in}
-                        onChange={(e) => updateFtIn("momHeightFt", "in", e.target.value)}
-                        className="bg-background/50 pr-8"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        in
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Dad height */}
-              <div className={inputWrapper}>
-                <Label htmlFor="dadHeight" className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  Dad's height
-                </Label>
-                {form.unit === "cm" ? (
-                  <div className="relative">
-                    <Input
-                      id="dadHeight"
-                      type="number"
-                      min={30}
-                      max={250}
-                      step={0.1}
-                      placeholder="e.g. 180"
-                      value={form.dadHeightCm}
-                      onChange={(e) => updateField("dadHeightCm", e.target.value)}
-                      className="bg-background/50 pr-12"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      cm
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        type="number"
-                        min={1}
-                        max={8}
-                        placeholder="ft"
-                        value={form.dadHeightFt.ft}
-                        onChange={(e) => updateFtIn("dadHeightFt", "ft", e.target.value)}
-                        className="bg-background/50 pr-8"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        ft
-                      </span>
-                    </div>
-                    <div className="relative flex-1">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={11}
-                        step={0.1}
-                        placeholder="in"
-                        value={form.dadHeightFt.in}
-                        onChange={(e) => updateFtIn("dadHeightFt", "in", e.target.value)}
-                        className="bg-background/50 pr-8"
-                      />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        in
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Lifestyle questions */}
-            <div className="border-t border-border pt-6">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Lifestyle habits
-              </h3>
-              <div className="grid gap-6 sm:grid-cols-3">
-                {/* Sleep */}
-                <div className={inputWrapper}>
-                  <Label htmlFor="sleep" className="flex items-center gap-2">
-                    <Moon className="h-4 w-4 text-primary" />
-                    Sleep per night
-                  </Label>
-                  <Select
-                    value={form.sleep}
-                    onValueChange={(value) => updateField("sleep", value as Sleep)}
-                  >
-                    <SelectTrigger id="sleep" className="bg-background/50">
-                      <SelectValue placeholder="Select sleep" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="<7">Less than 7 hours</SelectItem>
-                      <SelectItem value="7-8">7–8 hours</SelectItem>
-                      <SelectItem value="8-9">8–9 hours</SelectItem>
-                      <SelectItem value="9+">9+ hours</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Exercise */}
-                <div className={inputWrapper}>
-                  <Label htmlFor="exercise" className="flex items-center gap-2">
-                    <Dumbbell className="h-4 w-4 text-primary" />
-                    Exercise / sports
-                  </Label>
-                  <Select
-                    value={form.exercise}
-                    onValueChange={(value) => updateField("exercise", value as Exercise)}
-                  >
-                    <SelectTrigger id="exercise" className="bg-background/50">
-                      <SelectValue placeholder="Select activity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not active</SelectItem>
-                      <SelectItem value="light">Light (1–2 days/week)</SelectItem>
-                      <SelectItem value="moderate">Moderate (3–5 days/week)</SelectItem>
-                      <SelectItem value="very">Very active (6+ days/week)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Nutrition */}
-                <div className={inputWrapper}>
-                  <Label htmlFor="nutrition" className="flex items-center gap-2">
-                    <Apple className="h-4 w-4 text-primary" />
-                    Nutrition
-                  </Label>
-                  <Select
+            {/* Section 4 — Lifestyle */}
+            <Section
+              title="4. Lifestyle & health"
+              subtitle="These nudge the final height a little."
+            >
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Nutrition" icon={<Apple className="h-4 w-4 text-primary" />}>
+                  <SelectField
                     value={form.nutrition}
-                    onValueChange={(value) => updateField("nutrition", value as Nutrition)}
-                  >
-                    <SelectTrigger id="nutrition" className="bg-background/50">
-                      <SelectValue placeholder="Select nutrition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="needs-work">Needs work</SelectItem>
-                      <SelectItem value="okay">Okay</SelectItem>
-                      <SelectItem value="balanced">Balanced</SelectItem>
-                      <SelectItem value="very-healthy">Very healthy</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    onChange={(v) => update("nutrition", v as Nutrition)}
+                    options={[
+                      { value: "needs-work", label: "Needs work" },
+                      { value: "okay", label: "Okay" },
+                      { value: "balanced", label: "Balanced" },
+                      { value: "very-healthy", label: "Very healthy" },
+                      { value: UNKNOWN, label: "I don't know" },
+                    ]}
+                  />
+                </Field>
+                <Field label="Sleep per night" icon={<Moon className="h-4 w-4 text-primary" />}>
+                  <SelectField
+                    value={form.sleep}
+                    onChange={(v) => update("sleep", v as Sleep)}
+                    options={[
+                      { value: "<7", label: "Less than 7 hours" },
+                      { value: "7-8", label: "7–8 hours" },
+                      { value: "8-9", label: "8–9 hours" },
+                      { value: "9+", label: "9+ hours" },
+                      { value: UNKNOWN, label: "I don't know" },
+                    ]}
+                  />
+                </Field>
+                <Field label="Exercise / sports" icon={<Dumbbell className="h-4 w-4 text-primary" />}>
+                  <SelectField
+                    value={form.exercise}
+                    onChange={(v) => update("exercise", v as Exercise)}
+                    options={[
+                      { value: "none", label: "Not active" },
+                      { value: "light", label: "Light (1–2 days/week)" },
+                      { value: "moderate", label: "Moderate (3–5 days/week)" },
+                      { value: "very", label: "Very active (6+ days/week)" },
+                      { value: UNKNOWN, label: "I don't know" },
+                    ]}
+                  />
+                </Field>
+                <Field
+                  label="Chronic illness?"
+                  icon={<HeartPulse className="h-4 w-4 text-primary" />}
+                >
+                  <YesNoSelect
+                    value={form.chronicIllness}
+                    onChange={(v) => update("chronicIllness", v)}
+                  />
+                </Field>
+                <Field label="Born preterm?" icon={<Baby className="h-4 w-4 text-primary" />}>
+                  <YesNoSelect value={form.preterm} onChange={(v) => update("preterm", v)} />
+                </Field>
+                <Field
+                  label="Mother smoked during pregnancy?"
+                  icon={<Cigarette className="h-4 w-4 text-primary" />}
+                >
+                  <YesNoSelect
+                    value={form.smokingPregnancy}
+                    onChange={(v) => update("smokingPregnancy", v)}
+                  />
+                </Field>
+                <Field
+                  label="Any hormone treatment?"
+                  icon={<Pill className="h-4 w-4 text-primary" />}
+                >
+                  <YesNoSelect
+                    value={form.hormoneTreatment}
+                    onChange={(v) => update("hormoneTreatment", v)}
+                  />
+                </Field>
               </div>
-            </div>
+            </Section>
 
             {error && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground">
@@ -797,7 +771,6 @@ function Index() {
           </CardContent>
         </Card>
 
-        {/* Result */}
         {result && (
           <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Card className="overflow-hidden border border-primary/30 bg-gradient-to-br from-card to-secondary/40 shadow-2xl">
@@ -806,7 +779,7 @@ function Index() {
                   Your estimated adult height
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Based on your family heights, age, recent growth, and lifestyle habits.
+                  Based on everything you told us.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -820,7 +793,6 @@ function Index() {
                   </span>
                 </div>
 
-                {/* Visual bar */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{formatHeight(result.min, form.unit)}</span>
@@ -832,17 +804,13 @@ function Index() {
                       style={{ width: "50%", marginLeft: "25%" }}
                     />
                   </div>
-                  <p className="text-center text-xs text-muted-foreground">
-                    The middle of the bar shows your most likely height
-                  </p>
                 </div>
 
                 <div className="rounded-lg border border-border bg-background/40 p-4 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-foreground">Remember:</strong> this is a fun estimate,
-                    not a doctor's prediction. Real adult height depends on nutrition, sleep,
-                    exercise, genetics, and when you hit puberty. Keep eating well, sleeping enough,
-                    and staying active!
+                    <strong className="text-foreground">Remember:</strong> this is a fun
+                    estimate, not a doctor's prediction. The more questions you answer
+                    (instead of "I don't know"), the more accurate it gets.
                   </p>
                 </div>
               </CardContent>
@@ -850,11 +818,133 @@ function Index() {
           </div>
         )}
 
-        {/* Footer disclaimer */}
         <p className="mt-10 text-center text-xs text-muted-foreground">
           Not medical advice. For health concerns, talk to a pediatrician or doctor.
         </p>
       </div>
     </main>
+  );
+}
+
+/* ---------- small UI helpers ---------- */
+
+function Section({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-t border-border pt-6 first:border-t-0 first:pt-0">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-primary">{title}</h3>
+      {subtitle && <p className="mt-1 mb-4 text-xs text-muted-foreground">{subtitle}</p>}
+      {!subtitle && <div className="mb-4" />}
+      {children}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  icon,
+  hint,
+  children,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-2">
+        {icon}
+        {label}
+      </Label>
+      {children}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function NumberWithSuffix({
+  value,
+  onChange,
+  suffix,
+  placeholder,
+  min,
+  max,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  suffix: string;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+}) {
+  return (
+    <div className="relative">
+      <Input
+        type="number"
+        min={min}
+        max={max}
+        step={0.1}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-background/50 pr-14"
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+        {suffix}
+      </span>
+    </div>
+  );
+}
+
+function SelectField({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="bg-background/50">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function YesNoSelect({
+  value,
+  onChange,
+}: {
+  value: YesNoUnknown;
+  onChange: (v: YesNoUnknown) => void;
+}) {
+  return (
+    <SelectField
+      value={value}
+      onChange={(v) => onChange(v as YesNoUnknown)}
+      options={[
+        { value: "no", label: "No" },
+        { value: "yes", label: "Yes" },
+        { value: UNKNOWN, label: "I don't know" },
+      ]}
+    />
   );
 }
