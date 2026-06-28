@@ -836,7 +836,7 @@ function Index() {
 
                 <div className="rounded-lg border border-border bg-background/40 p-4 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-foreground">Remember:</strong> this is a personalized estimate, not a medical prediction. The more questions you answer (instead of "I don't know"), the more precise it becomes.
+                    <strong className="text-foreground">Remember:</strong> this is a personalized estimate, not a medical prediction.
                   </p>
                 </div>
               </CardContent>
