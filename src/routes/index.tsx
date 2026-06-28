@@ -12,7 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUp, RotateCcw, Ruler, Activity, User, Users, Sparkles, Moon, Dumbbell, Apple } from "lucide-react";
+import {
+  ArrowUp,
+  RotateCcw,
+  Ruler,
+  Activity,
+  User,
+  Users,
+  Sparkles,
+  Moon,
+  Dumbbell,
+  Apple,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -274,7 +285,9 @@ function Index() {
                   in: String(cmToFtIn(Number.parseFloat(prev.dadHeightCm) || 0).in),
                 };
           next.yearlyGrowthIn =
-            prev.yearlyGrowthCm === "" ? "" : formatInches(Number.parseFloat(prev.yearlyGrowthCm) || 0);
+            prev.yearlyGrowthCm === ""
+              ? ""
+              : formatInches(Number.parseFloat(prev.yearlyGrowthCm) || 0);
         } else {
           next.currentHeightCm =
             prev.currentHeightFt.ft === "" && prev.currentHeightFt.in === ""
@@ -826,9 +839,10 @@ function Index() {
 
                 <div className="rounded-lg border border-border bg-background/40 p-4 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-foreground">Remember:</strong> this is a fun estimate, not a
-                    doctor's prediction. Real adult height depends on nutrition, sleep, exercise, genetics,
-                    and when you hit puberty. Keep eating well, sleeping enough, and staying active!
+                    <strong className="text-foreground">Remember:</strong> this is a fun estimate,
+                    not a doctor's prediction. Real adult height depends on nutrition, sleep,
+                    exercise, genetics, and when you hit puberty. Keep eating well, sleeping enough,
+                    and staying active!
                   </p>
                 </div>
               </CardContent>
