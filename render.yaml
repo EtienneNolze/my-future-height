@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: my-future-height
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server/index.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: RENDER
+        value: "true"
