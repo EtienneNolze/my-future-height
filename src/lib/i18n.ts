@@ -331,10 +331,10 @@ const de: Dict = {
 
 const es: Dict = {
   badge: "Estimación personalizada de altura para niños y adolescentes",
-  h1_part1: "¿Cuánto ",
+  h1_part1: "Cómo serás de ",
   h1_tall: "alto",
-  h1_part2: " vas a ",
-  h1_grow: "crecer",
+  h1_part2: "",
+  h1_grow: "",
   h1_q: "?",
   intro:
     "Responde tantas preguntas como puedas — lo que no sepas, elige \"No lo sé\". Cuanto más completes, más precisa será la estimación.",
