@@ -368,22 +368,23 @@ function Index() {
       }
       return { ...prev, [key]: value };
     });
-    setError(null);
+    setErrorKey(null);
   }, []);
 
-  const lenUnit = form.unit === "cm" ? "cm" : "in";
+  const lenUnit = form.unit === "cm" ? t.unit_cm : "in";
 
   const handleCalculate = () => {
     const { result: r, error: e } = estimateAdultHeight(form);
     setResult(r);
-    setError(e);
+    setErrorKey(e);
   };
 
   const handleReset = () => {
     setForm(initialForm);
     setResult(null);
-    setError(null);
+    setErrorKey(null);
   };
+
 
   return (
     <main className="min-h-screen bg-background px-4 py-12 sm:py-16 lg:py-20">
