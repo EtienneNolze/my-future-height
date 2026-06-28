@@ -232,11 +232,11 @@ interface Estimate {
 
 function estimateAdultHeight(form: FormState): {
   result: Estimate | null;
-  error: string | null;
+  error: "age" | "height" | null;
 } {
   const age = Number.parseFloat(form.age);
   if (!Number.isFinite(age) || age < 2 || age > 25) {
-    return { result: null, error: "Please enter an age between 2 and 25 years." };
+    return { result: null, error: "age" };
   }
 
   const unit = form.unit;
@@ -245,8 +245,9 @@ function estimateAdultHeight(form: FormState): {
   const dadCm = toCm(form.dadHeight, unit);
 
   if (currentCm <= 30) {
-    return { result: null, error: "Please enter your current height." };
+    return { result: null, error: "height" };
   }
+
 
   // Mid-parental height — fall back to population averages when unknown
   const gender = form.gender;
