@@ -38,13 +38,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Answer questions about your age, height, parents, body measurements, growth, and lifestyle to get a fun estimate of your adult height.",
+          "Answer questions about your age, height, parents, body measurements, growth, and lifestyle to get a personalized estimate of your adult height.",
       },
       { property: "og:title", content: "GrowScope — How Tall Will You Be?" },
       {
         property: "og:description",
         content:
-          "Answer questions about your age, height, parents, body measurements, growth, and lifestyle to get a fun estimate of your adult height.",
+          "Answer questions about your age, height, parents, body measurements, growth, and lifestyle to get a personalized estimate of your adult height.",
       },
     ],
   }),
@@ -385,7 +385,7 @@ function Index() {
         <div className="mb-10 text-center sm:mb-14">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
             <Sparkles className="h-4 w-4" />
-            <span>Fun height estimate for kids & teens</span>
+            <span>Personalized height estimate for kids & teens</span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             How <span className="text-primary">tall</span> will you{" "}
@@ -836,9 +836,7 @@ function Index() {
 
                 <div className="rounded-lg border border-border bg-background/40 p-4 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-foreground">Remember:</strong> this is a fun
-                    estimate, not a doctor's prediction. The more questions you answer
-                    (instead of "I don't know"), the more accurate it gets.
+                    <strong className="text-foreground">Remember:</strong> this is a personalized estimate, not a medical prediction. The more questions you answer (instead of "I don't know"), the more precise it becomes.
                   </p>
                 </div>
               </CardContent>
