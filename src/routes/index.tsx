@@ -52,7 +52,8 @@ export const Route = createFileRoute("/")({
 });
 
 type Unit = "cm" | "ft";
-type Gender = "boy" | "girl" | "unknown";
+type Gender = "boy" | "girl";
+type ShoeSystem = "eu" | "uk" | "us-men" | "us-women";
 type Ethnicity =
   | "european"
   | "east-asian"
@@ -89,7 +90,8 @@ interface FormState {
   armSpan: string;
   shoulderWidth: string;
   handLength: string;
-  footLength: string;
+  shoeSize: string;
+  shoeSystem: ShoeSystem;
   headCircumference: string;
   // Development
   spurtAge: string;
@@ -109,7 +111,7 @@ interface FormState {
 const initialForm: FormState = {
   unit: "cm",
   age: "",
-  gender: "unknown",
+  gender: "boy",
   ethnicity: "unknown",
   momHeight: "",
   dadHeight: "",
@@ -121,7 +123,8 @@ const initialForm: FormState = {
   armSpan: "",
   shoulderWidth: "",
   handLength: "",
-  footLength: "",
+  shoeSize: "",
+  shoeSystem: "eu",
   headCircumference: "",
   spurtAge: "",
   stillGrowing: "unknown",
@@ -155,12 +158,21 @@ function formatHeight(cm: number, unit: Unit): string {
   return `${ft} ft ${inches} in`;
 }
 
-function ethnicityAdjust(eth: Ethnicity, gender: Gender): number {
-  // Tiny shift around 0; population-average tendencies
-  const male = gender !== "girl";
+function shoeSizeToFootCm(size: string, system: ShoeSystem): number {
+  const n = Number.parseFloat(size);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  let eu = n;
+  if (system === "uk") eu = n + 33;
+  else if (system === "us-men") eu = n + 32;
+  else if (system === "us-women") eu = n + 31;
+  return (eu * 2) / 3 - 1;
+}
+
+
+function ethnicityAdjust(eth: Ethnicity, _gender: Gender): number {
   switch (eth) {
     case "european":
-      return male ? 1 : 1;
+      return 1;
     case "east-asian":
       return -1;
     case "south-asian":
@@ -263,7 +275,7 @@ function estimateAdultHeight(form: FormState): {
 
   // Optional body-measurement hints
   const armSpanCm = toCm(form.armSpan, unit);
-  const footLenCm = toCm(form.footLength, unit);
+  const footLenCm = shoeSizeToFootCm(form.shoeSize, form.shoeSystem);
   const measurementEstimates: number[] = [];
   if (armSpanCm > 80) {
     // Arm span ≈ adult height
@@ -305,7 +317,7 @@ function estimateAdultHeight(form: FormState): {
   range += Math.max(0, 16 - age) * 0.35;
   if (momCm <= 0) range += 2;
   if (dadCm <= 0) range += 2;
-  if (gender === "unknown") range += 1.5;
+  
 
   return {
     result: { estimate: base, min: base - range, max: base + range },
@@ -342,7 +354,7 @@ function Index() {
           armSpan: convert(prev.armSpan),
           shoulderWidth: convert(prev.shoulderWidth),
           handLength: convert(prev.handLength),
-          footLength: convert(prev.footLength),
+          
           headCircumference: convert(prev.headCircumference),
           yearlyGrowth: convert(prev.yearlyGrowth),
         };
@@ -446,7 +458,6 @@ function Index() {
                     options={[
                       { value: "boy", label: "Male" },
                       { value: "girl", label: "Female" },
-                      { value: UNKNOWN, label: "I don't know / prefer not to say" },
                     ]}
                   />
                 </Field>
@@ -579,15 +590,32 @@ function Index() {
                   />
                 </Field>
                 <Field
-                  label="Foot length"
+                  label="Shoe size"
                   icon={<Footprints className="h-4 w-4 text-primary" />}
+                  hint="Foot length is estimated from your shoe size"
                 >
-                  <NumberWithSuffix
-                    value={form.footLength}
-                    onChange={(v) => update("footLength", v)}
-                    suffix={lenUnit}
-                    placeholder="optional"
-                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <NumberWithSuffix
+                        value={form.shoeSize}
+                        onChange={(v) => update("shoeSize", v)}
+                        suffix={form.shoeSystem === "eu" ? "EU" : form.shoeSystem === "uk" ? "UK" : "US"}
+                        placeholder="optional"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <SelectField
+                        value={form.shoeSystem}
+                        onChange={(v) => update("shoeSystem", v as ShoeSystem)}
+                        options={[
+                          { value: "eu", label: "EU" },
+                          { value: "uk", label: "UK" },
+                          { value: "us-men", label: "US (men)" },
+                          { value: "us-women", label: "US (women)" },
+                        ]}
+                      />
+                    </div>
+                  </div>
                 </Field>
                 <Field
                   label="Head circumference"
