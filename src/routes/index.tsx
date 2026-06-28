@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,7 +75,7 @@ const initialForm: FormState = {
 function ftInToCm(ft: string, inch: string): number {
   const f = Number.parseFloat(ft) || 0;
   const i = Number.parseFloat(inch) || 0;
-  return (f * 30.48) + (i * 2.54);
+  return f * 30.48 + i * 2.54;
 }
 
 function cmToFtIn(cm: number): { ft: number; in: number } {
@@ -93,7 +93,19 @@ function formatHeight(cm: number, unit: Unit): string {
   return `${ft} ft ${inches} in`;
 }
 
-function estimateAdultHeight(gender: Gender, age: number, currentCm: number, momCm: number, dadCm: number, yearlyGrowthCm: number): { estimate: number; min: number; max: number } {
+function formatInches(cm: number): string {
+  const inches = Math.round((cm / 2.54) * 10) / 10;
+  return String(inches);
+}
+
+function estimateAdultHeight(
+  gender: Gender,
+  age: number,
+  currentCm: number,
+  momCm: number,
+  dadCm: number,
+  yearlyGrowthCm: number,
+): { estimate: number; min: number; max: number } {
   // Mid-parental height (target adult height from genetics)
   const geneticTarget = gender === "boy" ? (momCm + dadCm + 13) / 2 : (momCm + dadCm - 13) / 2;
 
@@ -170,18 +182,71 @@ function Index() {
     return inches * 2.54;
   }, [form.unit, form.yearlyGrowthCm, form.yearlyGrowthIn]);
 
-  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const updateField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => {
+      if (key === "unit" && value !== prev.unit) {
+        const newUnit = value as Unit;
+        // Convert current values into the new unit so the user doesn't lose their input
+        const next: FormState = { ...prev, unit: newUnit };
+        if (newUnit === "ft") {
+          next.currentHeightFt =
+            prev.currentHeightCm === ""
+              ? { ...EMPTY_FT }
+              : {
+                  ft: String(cmToFtIn(Number.parseFloat(prev.currentHeightCm) || 0).ft),
+                  in: String(cmToFtIn(Number.parseFloat(prev.currentHeightCm) || 0).in),
+                };
+          next.momHeightFt =
+            prev.momHeightCm === ""
+              ? { ...EMPTY_FT }
+              : {
+                  ft: String(cmToFtIn(Number.parseFloat(prev.momHeightCm) || 0).ft),
+                  in: String(cmToFtIn(Number.parseFloat(prev.momHeightCm) || 0).in),
+                };
+          next.dadHeightFt =
+            prev.dadHeightCm === ""
+              ? { ...EMPTY_FT }
+              : {
+                  ft: String(cmToFtIn(Number.parseFloat(prev.dadHeightCm) || 0).ft),
+                  in: String(cmToFtIn(Number.parseFloat(prev.dadHeightCm) || 0).in),
+                };
+          next.yearlyGrowthIn =
+            prev.yearlyGrowthCm === "" ? "" : formatInches(Number.parseFloat(prev.yearlyGrowthCm) || 0);
+        } else {
+          next.currentHeightCm =
+            prev.currentHeightFt.ft === "" && prev.currentHeightFt.in === ""
+              ? ""
+              : String(Math.round(ftInToCm(prev.currentHeightFt.ft, prev.currentHeightFt.in)));
+          next.momHeightCm =
+            prev.momHeightFt.ft === "" && prev.momHeightFt.in === ""
+              ? ""
+              : String(Math.round(ftInToCm(prev.momHeightFt.ft, prev.momHeightFt.in)));
+          next.dadHeightCm =
+            prev.dadHeightFt.ft === "" && prev.dadHeightFt.in === ""
+              ? ""
+              : String(Math.round(ftInToCm(prev.dadHeightFt.ft, prev.dadHeightFt.in)));
+          next.yearlyGrowthCm =
+            prev.yearlyGrowthIn === ""
+              ? ""
+              : String(Math.round((Number.parseFloat(prev.yearlyGrowthIn) || 0) * 2.54));
+        }
+        return next;
+      }
+      return { ...prev, [key]: value };
+    });
     setError(null);
-  }
+  }, []);
 
-  function updateFtIn(field: "currentHeightFt" | "momHeightFt" | "dadHeightFt", key: keyof HeightFtIn, value: string) {
-    setForm((prev) => ({
-      ...prev,
-      [field]: { ...prev[field], [key]: value },
-    }));
-    setError(null);
-  }
+  const updateFtIn = useCallback(
+    (field: "currentHeightFt" | "momHeightFt" | "dadHeightFt", key: keyof HeightFtIn, value: string) => {
+      setForm((prev) => ({
+        ...prev,
+        [field]: { ...prev[field], [key]: value },
+      }));
+      setError(null);
+    },
+    [],
+  );
 
   function handleCalculate() {
     const age = Number.parseFloat(form.age);
@@ -207,7 +272,9 @@ function Index() {
     }
 
     setError(null);
-    setResult(estimateAdultHeight(form.gender, age, currentHeightCm, momHeightCm, dadHeightCm, yearlyGrowthCm));
+    setResult(
+      estimateAdultHeight(form.gender, age, currentHeightCm, momHeightCm, dadHeightCm, yearlyGrowthCm),
+    );
   }
 
   function handleReset() {
@@ -231,7 +298,8 @@ function Index() {
             How tall will <span className="text-primary">you</span> grow?
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Tell us a few things about yourself and your family, and we'll estimate your adult height. Remember — this is just for fun, not a medical prediction!
+            Tell us a few things about yourself and your family, and we'll estimate your adult height.
+            Remember — this is just for fun, not a medical prediction!
           </p>
         </div>
 
