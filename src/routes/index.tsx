@@ -52,7 +52,8 @@ export const Route = createFileRoute("/")({
 });
 
 type Unit = "cm" | "ft";
-type Gender = "boy" | "girl" | "unknown";
+type Gender = "boy" | "girl";
+type ShoeSystem = "eu" | "uk" | "us-men" | "us-women";
 type Ethnicity =
   | "european"
   | "east-asian"
