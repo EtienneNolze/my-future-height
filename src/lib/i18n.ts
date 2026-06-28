@@ -537,4 +537,4 @@ const fr: Dict = {
   language: "Langue",
 };
 
-export const DICTS: Record<Lang, Dict> = { en, de, es, fr };
+export const DICTS: Record<Lang, Dict> = { de, fr, en, es };
