@@ -96,6 +96,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "GrowScope — How Tall Will You Be?" },
+      { name: "description", content: "Predict your future adult height with personalized growth estimations." },
+      { property: "og:description", content: "Predict your future adult height with personalized growth estimations." },
+      { name: "twitter:description", content: "Predict your future adult height with personalized growth estimations." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/52cc14b4-899e-46da-ade7-ac6cba3c0f77/id-preview-cdeb09d5--f4d95f8a-a690-422f-a9ad-d42551ae2a7a.lovable.app-1782651553380.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/52cc14b4-899e-46da-ade7-ac6cba3c0f77/id-preview-cdeb09d5--f4d95f8a-a690-422f-a9ad-d42551ae2a7a.lovable.app-1782651553380.png" },
     ],
     links: [
       {
