@@ -595,15 +595,15 @@ function Index() {
                   hint="Foot length is estimated from your shoe size"
                 >
                   <div className="flex gap-2">
-                    <div className="flex-1">
-                      <NumberWithSuffix
-                        value={form.shoeSize}
-                        onChange={(v) => update("shoeSize", v)}
-                        suffix={form.shoeSystem === "eu" ? "EU" : form.shoeSystem === "uk" ? "UK" : "US"}
-                        placeholder="optional"
-                      />
-                    </div>
-                    <div className="w-32">
+                    <Input
+                      type="number"
+                      step={0.5}
+                      placeholder="e.g. 42"
+                      value={form.shoeSize}
+                      onChange={(e) => update("shoeSize", e.target.value)}
+                      className="flex-1 bg-background/50"
+                    />
+                    <div className="w-36">
                       <SelectField
                         value={form.shoeSystem}
                         onChange={(v) => update("shoeSystem", v as ShoeSystem)}
