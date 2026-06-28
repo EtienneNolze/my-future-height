@@ -332,9 +332,12 @@ function estimateAdultHeight(form: FormState): {
 function Index() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [result, setResult] = useState<Estimate | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<"age" | "height" | null>(null);
+  const [lang, setLang] = useState<Lang>("en");
+  const t: Dict = DICTS[lang];
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
+
     setForm((prev) => {
       // When switching units, convert numeric height-like fields
       if (key === "unit" && value !== prev.unit) {
