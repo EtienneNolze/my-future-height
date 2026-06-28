@@ -211,7 +211,9 @@ function Index() {
                   in: String(cmToFtIn(Number.parseFloat(prev.dadHeightCm) || 0).in),
                 };
           next.yearlyGrowthIn =
-            prev.yearlyGrowthCm === "" ? "" : formatInches(Number.parseFloat(prev.yearlyGrowthCm) || 0);
+            prev.yearlyGrowthCm === ""
+              ? ""
+              : formatInches(Number.parseFloat(prev.yearlyGrowthCm) || 0);
         } else {
           next.currentHeightCm =
             prev.currentHeightFt.ft === "" && prev.currentHeightFt.in === ""
@@ -238,7 +240,11 @@ function Index() {
   }, []);
 
   const updateFtIn = useCallback(
-    (field: "currentHeightFt" | "momHeightFt" | "dadHeightFt", key: keyof HeightFtIn, value: string) => {
+    (
+      field: "currentHeightFt" | "momHeightFt" | "dadHeightFt",
+      key: keyof HeightFtIn,
+      value: string,
+    ) => {
       setForm((prev) => ({
         ...prev,
         [field]: { ...prev[field], [key]: value },
@@ -273,7 +279,14 @@ function Index() {
 
     setError(null);
     setResult(
-      estimateAdultHeight(form.gender, age, currentHeightCm, momHeightCm, dadHeightCm, yearlyGrowthCm),
+      estimateAdultHeight(
+        form.gender,
+        age,
+        currentHeightCm,
+        momHeightCm,
+        dadHeightCm,
+        yearlyGrowthCm,
+      ),
     );
   }
 
@@ -298,8 +311,8 @@ function Index() {
             How tall will <span className="text-primary">you</span> grow?
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Tell us a few things about yourself and your family, and we'll estimate your adult height.
-            Remember — this is just for fun, not a medical prediction!
+            Tell us a few things about yourself and your family, and we'll estimate your adult
+            height. Remember — this is just for fun, not a medical prediction!
           </p>
         </div>
 
@@ -317,7 +330,9 @@ function Index() {
           <CardContent className="space-y-6 pt-6">
             {/* Unit toggle */}
             <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
-              <span className="text-sm font-medium text-secondary-foreground">Measurement unit</span>
+              <span className="text-sm font-medium text-secondary-foreground">
+                Measurement unit
+              </span>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -345,7 +360,10 @@ function Index() {
                   <User className="h-4 w-4 text-primary" />
                   You are
                 </Label>
-                <Select value={form.gender} onValueChange={(value) => updateField("gender", value as Gender)}>
+                <Select
+                  value={form.gender}
+                  onValueChange={(value) => updateField("gender", value as Gender)}
+                >
                   <SelectTrigger id="gender" className="bg-background/50">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -646,7 +664,8 @@ function Index() {
                     {formatHeight(result.estimate, form.unit)}
                   </span>
                   <span className="text-sm font-medium text-muted-foreground sm:text-base">
-                    likely range: {formatHeight(result.min, form.unit)} — {formatHeight(result.max, form.unit)}
+                    likely range: {formatHeight(result.min, form.unit)} —{" "}
+                    {formatHeight(result.max, form.unit)}
                   </span>
                 </div>
 
@@ -669,9 +688,10 @@ function Index() {
 
                 <div className="rounded-lg border border-border bg-background/40 p-4 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-foreground">Remember:</strong> this is a fun estimate, not a doctor's
-                    prediction. Real adult height depends on nutrition, sleep, exercise, genetics, and when you hit
-                    puberty. Keep eating well, sleeping enough, and staying active!
+                    <strong className="text-foreground">Remember:</strong> this is a fun estimate,
+                    not a doctor's prediction. Real adult height depends on nutrition, sleep,
+                    exercise, genetics, and when you hit puberty. Keep eating well, sleeping enough,
+                    and staying active!
                   </p>
                 </div>
               </CardContent>

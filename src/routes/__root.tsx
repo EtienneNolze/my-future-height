@@ -81,10 +81,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "GrowScope — How Tall Will You Be?" },
-      { name: "description", content: "A fun height-growth predictor for kids and teens. Answer a few quick questions and get an estimate of your adult height." },
+      {
+        name: "description",
+        content:
+          "A fun height-growth predictor for kids and teens. Answer a few quick questions and get an estimate of your adult height.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "GrowScope — How Tall Will You Be?" },
-      { property: "og:description", content: "A fun height-growth predictor for kids and teens. Answer a few quick questions and get an estimate of your adult height." },
+      {
+        property: "og:description",
+        content:
+          "A fun height-growth predictor for kids and teens. Answer a few quick questions and get an estimate of your adult height.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
