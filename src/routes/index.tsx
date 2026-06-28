@@ -158,6 +158,17 @@ function formatHeight(cm: number, unit: Unit): string {
   return `${ft} ft ${inches} in`;
 }
 
+function shoeSizeToFootCm(size: string, system: ShoeSystem): number {
+  const n = Number.parseFloat(size);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  let eu = n;
+  if (system === "uk") eu = n + 33;
+  else if (system === "us-men") eu = n + 32;
+  else if (system === "us-women") eu = n + 31;
+  return (eu * 2) / 3 - 1;
+}
+
+
 function ethnicityAdjust(eth: Ethnicity, _gender: Gender): number {
   switch (eth) {
     case "european":
@@ -447,7 +458,6 @@ function Index() {
                     options={[
                       { value: "boy", label: "Male" },
                       { value: "girl", label: "Female" },
-                      { value: UNKNOWN, label: "I don't know / prefer not to say" },
                     ]}
                   />
                 </Field>
