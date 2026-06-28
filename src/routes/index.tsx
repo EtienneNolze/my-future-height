@@ -841,6 +841,9 @@ function Index() {
                   <p className="mt-2">
                     It combines the <strong className="text-foreground">mid-parental height (Tanner method)</strong>, your current growth rate, and basic anthropometric rules like arm span and foot length.
                   </p>
+                  <p className="mt-2">
+                    The most important inputs are <strong className="text-foreground">age, gender, parents' heights, current height, and recent yearly growth</strong>.
+                  </p>
                 </div>
               </CardContent>
             </Card>
