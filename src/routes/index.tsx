@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,10 @@ import {
   Baby,
   Cigarette,
   Pill,
+  Languages,
 } from "lucide-react";
+import { DICTS, LANG_LABELS, type Dict, type Lang } from "@/lib/i18n";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
