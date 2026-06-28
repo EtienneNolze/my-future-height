@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,10 @@ import {
   Baby,
   Cigarette,
   Pill,
+  Languages,
 } from "lucide-react";
+import { DICTS, LANG_LABELS, type Dict, type Lang } from "@/lib/i18n";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -229,11 +232,11 @@ interface Estimate {
 
 function estimateAdultHeight(form: FormState): {
   result: Estimate | null;
-  error: string | null;
+  error: "age" | "height" | null;
 } {
   const age = Number.parseFloat(form.age);
   if (!Number.isFinite(age) || age < 2 || age > 25) {
-    return { result: null, error: "Please enter an age between 2 and 25 years." };
+    return { result: null, error: "age" };
   }
 
   const unit = form.unit;
@@ -242,8 +245,9 @@ function estimateAdultHeight(form: FormState): {
   const dadCm = toCm(form.dadHeight, unit);
 
   if (currentCm <= 30) {
-    return { result: null, error: "Please enter your current height." };
+    return { result: null, error: "height" };
   }
+
 
   // Mid-parental height — fall back to population averages when unknown
   const gender = form.gender;
@@ -328,9 +332,12 @@ function estimateAdultHeight(form: FormState): {
 function Index() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [result, setResult] = useState<Estimate | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<"age" | "height" | null>(null);
+  const [lang, setLang] = useState<Lang>("en");
+  const t: Dict = DICTS[lang];
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
+
     setForm((prev) => {
       // When switching units, convert numeric height-like fields
       if (key === "unit" && value !== prev.unit) {
@@ -361,39 +368,61 @@ function Index() {
       }
       return { ...prev, [key]: value };
     });
-    setError(null);
+    setErrorKey(null);
   }, []);
 
-  const lenUnit = form.unit === "cm" ? "cm" : "in";
+  const lenUnit = form.unit === "cm" ? t.unit_cm : "in";
 
   const handleCalculate = () => {
     const { result: r, error: e } = estimateAdultHeight(form);
     setResult(r);
-    setError(e);
+    setErrorKey(e);
   };
 
   const handleReset = () => {
     setForm(initialForm);
     setResult(null);
-    setError(null);
+    setErrorKey(null);
   };
+
 
   return (
     <main className="min-h-screen bg-background px-4 py-12 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-3xl">
+        {/* Language switcher */}
+        <div className="mb-6 flex items-center justify-end gap-2">
+          <Languages className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">{t.language}</span>
+          {(Object.keys(LANG_LABELS) as Lang[]).map((code) => (
+            <Button
+              key={code}
+              type="button"
+              size="sm"
+              variant={lang === code ? "default" : "outline"}
+              onClick={() => setLang(code)}
+              aria-label={code}
+              className="h-8 px-2.5 text-xs"
+            >
+              {LANG_LABELS[code]}
+            </Button>
+          ))}
+        </div>
+
         {/* Hero */}
         <div className="mb-10 text-center sm:mb-14">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
             <Sparkles className="h-4 w-4" />
-            <span>Personalized height estimate for kids & teens</span>
+            <span>{t.badge}</span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            How <span className="text-primary">tall</span> will you{" "}
-            <span className="text-primary">grow</span>?
+            {t.h1_part1}
+            <span className="text-primary">{t.h1_tall}</span>
+            {t.h1_part2}
+            <span className="text-primary">{t.h1_grow}</span>
+            {t.h1_q}
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Answer as many questions as you can — anything you don't know, just pick
-            "I don't know". The more you fill in, the more accurate the estimate.
+            {t.intro}
           </p>
         </div>
 
@@ -402,17 +431,17 @@ function Index() {
           <CardHeader className="bg-secondary/30 pb-6">
             <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground sm:text-2xl">
               <Ruler className="h-5 w-5 text-primary" />
-              Your growth profile
+              {t.card_title}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Switch between centimeters and inches. Skip anything you don't know.
+              {t.card_desc}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8 pt-6">
             {/* Unit toggle */}
             <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/20 p-3">
               <span className="text-sm font-medium text-secondary-foreground">
-                Measurement unit
+                {t.unit_label}
               </span>
               <div className="flex gap-2">
                 <Button
@@ -421,7 +450,7 @@ function Index() {
                   size="sm"
                   onClick={() => update("unit", "cm")}
                 >
-                  cm
+                  {t.unit_cm}
                 </Button>
                 <Button
                   type="button"
@@ -429,176 +458,170 @@ function Index() {
                   size="sm"
                   onClick={() => update("unit", "ft")}
                 >
-                  inches
+                  {t.unit_in}
                 </Button>
               </div>
             </div>
 
             {/* Section 1 — Most important */}
-            <Section
-              title="1. Most important"
-              subtitle="These have the biggest impact on the estimate."
-            >
+            <Section title={t.sec1_title} subtitle={t.sec1_sub}>
               <div className="grid gap-6 sm:grid-cols-2">
-                <Field label="Your age" icon={<Activity className="h-4 w-4 text-primary" />}>
+                <Field label={t.age} icon={<Activity className="h-4 w-4 text-primary" />}>
                   <NumberWithSuffix
                     value={form.age}
                     onChange={(v) => update("age", v)}
-                    suffix="yrs"
-                    placeholder="e.g. 13"
+                    suffix={t.yrs}
+                    placeholder={t.age_ph}
                     min={2}
                     max={25}
                   />
                 </Field>
 
-                <Field label="Gender at birth" icon={<User className="h-4 w-4 text-primary" />}>
+                <Field label={t.gender} icon={<User className="h-4 w-4 text-primary" />}>
                   <SelectField
                     value={form.gender}
                     onChange={(v) => update("gender", v as Gender)}
                     options={[
-                      { value: "boy", label: "Male" },
-                      { value: "girl", label: "Female" },
+                      { value: "boy", label: t.male },
+                      { value: "girl", label: t.female },
                     ]}
                   />
                 </Field>
 
                 <Field
-                  label="Ethnic / regional background"
+                  label={t.ethnicity}
                   icon={<Globe2 className="h-4 w-4 text-primary" />}
                 >
                   <SelectField
                     value={form.ethnicity}
                     onChange={(v) => update("ethnicity", v as Ethnicity)}
                     options={[
-                      { value: "european", label: "European" },
-                      { value: "east-asian", label: "East Asian" },
-                      { value: "south-asian", label: "South Asian" },
-                      { value: "south-east-asian", label: "South-East Asian" },
-                      { value: "african", label: "African" },
-                      { value: "middle-eastern", label: "Middle Eastern" },
-                      { value: "latin-american", label: "Latin American" },
-                      { value: "mixed-other", label: "Mixed / Other" },
-                      { value: UNKNOWN, label: "I don't know" },
+                      { value: "european", label: t.eth_european },
+                      { value: "east-asian", label: t.eth_east_asian },
+                      { value: "south-asian", label: t.eth_south_asian },
+                      { value: "south-east-asian", label: t.eth_se_asian },
+                      { value: "african", label: t.eth_african },
+                      { value: "middle-eastern", label: t.eth_middle_eastern },
+                      { value: "latin-american", label: t.eth_latin },
+                      { value: "mixed-other", label: t.eth_mixed },
+                      { value: UNKNOWN, label: t.dont_know },
                     ]}
                   />
                 </Field>
 
                 <Field
-                  label="Your current height"
+                  label={t.current_height}
                   icon={<Ruler className="h-4 w-4 text-primary" />}
                 >
                   <NumberWithSuffix
                     value={form.currentHeight}
                     onChange={(v) => update("currentHeight", v)}
                     suffix={lenUnit}
-                    placeholder={form.unit === "cm" ? "e.g. 150" : "e.g. 59"}
+                    placeholder={form.unit === "cm" ? "150" : "59"}
                   />
                 </Field>
 
                 <Field
-                  label="Mom's height"
+                  label={t.mom_height}
                   icon={<Users className="h-4 w-4 text-primary" />}
-                  hint="Leave blank if unknown"
+                  hint={t.leave_blank}
                 >
                   <NumberWithSuffix
                     value={form.momHeight}
                     onChange={(v) => update("momHeight", v)}
                     suffix={lenUnit}
-                    placeholder={form.unit === "cm" ? "e.g. 165" : "e.g. 65"}
+                    placeholder={form.unit === "cm" ? "165" : "65"}
                   />
                 </Field>
 
                 <Field
-                  label="Dad's height"
+                  label={t.dad_height}
                   icon={<Users className="h-4 w-4 text-primary" />}
-                  hint="Leave blank if unknown"
+                  hint={t.leave_blank}
                 >
                   <NumberWithSuffix
                     value={form.dadHeight}
                     onChange={(v) => update("dadHeight", v)}
                     suffix={lenUnit}
-                    placeholder={form.unit === "cm" ? "e.g. 180" : "e.g. 71"}
+                    placeholder={form.unit === "cm" ? "180" : "71"}
                   />
                 </Field>
               </div>
             </Section>
 
             {/* Section 2 — Body measurements */}
-            <Section
-              title="2. Body measurements"
-              subtitle="Optional — useful if parents' heights are unknown. Arm span ≈ adult height, and foot length tracks adult height well."
-            >
+            <Section title={t.sec2_title} subtitle={t.sec2_sub}>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Weight" icon={<Activity className="h-4 w-4 text-primary" />}>
+                <Field label={t.weight} icon={<Activity className="h-4 w-4 text-primary" />}>
                   <NumberWithSuffix
                     value={form.weightKg}
                     onChange={(v) => update("weightKg", v)}
                     suffix={form.unit === "cm" ? "kg" : "lb"}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
-                <Field label="Sitting height" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                <Field label={t.sitting_height} icon={<Ruler className="h-4 w-4 text-primary" />}>
                   <NumberWithSuffix
                     value={form.sittingHeight}
                     onChange={(v) => update("sittingHeight", v)}
                     suffix={lenUnit}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
-                <Field label="Leg length" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                <Field label={t.leg_length} icon={<Ruler className="h-4 w-4 text-primary" />}>
                   <NumberWithSuffix
                     value={form.legLength}
                     onChange={(v) => update("legLength", v)}
                     suffix={lenUnit}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
-                <Field label="Inseam" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                <Field label={t.inseam} icon={<Ruler className="h-4 w-4 text-primary" />}>
                   <NumberWithSuffix
                     value={form.inseam}
                     onChange={(v) => update("inseam", v)}
                     suffix={lenUnit}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
                 <Field
-                  label="Arm span"
+                  label={t.arm_span}
                   icon={<Ruler className="h-4 w-4 text-primary" />}
-                  hint="Fingertip to fingertip"
+                  hint={t.arm_span_hint}
                 >
                   <NumberWithSuffix
                     value={form.armSpan}
                     onChange={(v) => update("armSpan", v)}
                     suffix={lenUnit}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
-                <Field label="Shoulder width" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                <Field label={t.shoulder} icon={<Ruler className="h-4 w-4 text-primary" />}>
                   <NumberWithSuffix
                     value={form.shoulderWidth}
                     onChange={(v) => update("shoulderWidth", v)}
                     suffix={lenUnit}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
-                <Field label="Hand length" icon={<Ruler className="h-4 w-4 text-primary" />}>
+                <Field label={t.hand_length} icon={<Ruler className="h-4 w-4 text-primary" />}>
                   <NumberWithSuffix
                     value={form.handLength}
                     onChange={(v) => update("handLength", v)}
                     suffix={lenUnit}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
                 <Field
-                  label="Shoe size"
+                  label={t.shoe_size}
                   icon={<Footprints className="h-4 w-4 text-primary" />}
-                  hint="Foot length is estimated from your shoe size"
+                  hint={t.shoe_size_hint}
                 >
                   <div className="flex gap-2">
                     <Input
                       type="number"
                       step={0.5}
-                      placeholder="e.g. 42"
+                      placeholder="42"
                       value={form.shoeSize}
                       onChange={(e) => update("shoeSize", e.target.value)}
                       className="flex-1 bg-background/50"
@@ -618,73 +641,70 @@ function Index() {
                   </div>
                 </Field>
                 <Field
-                  label="Head circumference"
+                  label={t.head_circ}
                   icon={<Ruler className="h-4 w-4 text-primary" />}
                 >
                   <NumberWithSuffix
                     value={form.headCircumference}
                     onChange={(v) => update("headCircumference", v)}
                     suffix={lenUnit}
-                    placeholder="optional"
+                    placeholder={t.optional}
                   />
                 </Field>
               </div>
             </Section>
 
             {/* Section 3 — Development */}
-            <Section
-              title="3. Growth & development"
-              subtitle="Only relevant if you're still growing."
-            >
+            <Section title={t.sec3_title} subtitle={t.sec3_sub}>
               <div className="grid gap-6 sm:grid-cols-2">
                 <Field
-                  label="Age at growth spurt (if known)"
+                  label={t.spurt_age}
                   icon={<ArrowUp className="h-4 w-4 text-primary" />}
                 >
                   <NumberWithSuffix
                     value={form.spurtAge}
                     onChange={(v) => update("spurtAge", v)}
-                    suffix="yrs"
-                    placeholder="optional"
+                    suffix={t.yrs}
+                    placeholder={t.optional}
                   />
                 </Field>
                 <Field
-                  label="Are you still growing?"
+                  label={t.still_growing}
                   icon={<Activity className="h-4 w-4 text-primary" />}
                 >
                   <SelectField
                     value={form.stillGrowing}
                     onChange={(v) => update("stillGrowing", v as StillGrowing)}
                     options={[
-                      { value: "yes", label: "Yes" },
-                      { value: "no", label: "No, I've stopped" },
-                      { value: UNKNOWN, label: "I don't know" },
+                      { value: "yes", label: t.yes },
+                      { value: "no", label: t.no_stopped },
+                      { value: UNKNOWN, label: t.dont_know },
                     ]}
                   />
                 </Field>
                 <Field
-                  label="How much did you grow last year?"
+                  label={t.growth_last_year}
                   icon={<ArrowUp className="h-4 w-4 text-primary" />}
                 >
                   <NumberWithSuffix
                     value={form.yearlyGrowth}
                     onChange={(v) => update("yearlyGrowth", v)}
                     suffix={lenUnit}
-                    placeholder={form.unit === "cm" ? "e.g. 6" : "e.g. 2.4"}
+                    placeholder={form.unit === "cm" ? "6" : "2.4"}
                   />
                 </Field>
                 <Field
-                  label="Growth spurt status"
+                  label={t.growth_spurt}
                   icon={<ArrowUp className="h-4 w-4 text-primary" />}
                 >
                   <SelectField
                     value={form.growthSpurt}
                     onChange={(v) => update("growthSpurt", v as GrowthSpurt)}
                     options={[
-                      { value: "not-yet", label: "Hasn't started yet" },
-                      { value: "now", label: "Happening now" },
-                      { value: "done", label: "Already finished" },
-                      { value: UNKNOWN, label: "I don't know" },
+                      { value: "not-yet", label: t.spurt_not_yet },
+                      { value: "now", label: t.spurt_now },
+                      { value: "done", label: t.spurt_done },
+                      { value: UNKNOWN, label: t.dont_know },
                     ]}
                   />
                 </Field>
@@ -692,86 +712,86 @@ function Index() {
             </Section>
 
             {/* Section 4 — Lifestyle */}
-            <Section
-              title="4. Lifestyle & health"
-              subtitle="These nudge the final height a little."
-            >
+            <Section title={t.sec4_title} subtitle={t.sec4_sub}>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Nutrition" icon={<Apple className="h-4 w-4 text-primary" />}>
+                <Field label={t.nutrition} icon={<Apple className="h-4 w-4 text-primary" />}>
                   <SelectField
                     value={form.nutrition}
                     onChange={(v) => update("nutrition", v as Nutrition)}
                     options={[
-                      { value: "needs-work", label: "Needs work" },
-                      { value: "okay", label: "Okay" },
-                      { value: "balanced", label: "Balanced" },
-                      { value: "very-healthy", label: "Very healthy" },
-                      { value: UNKNOWN, label: "I don't know" },
+                      { value: "needs-work", label: t.nut_needs_work },
+                      { value: "okay", label: t.nut_okay },
+                      { value: "balanced", label: t.nut_balanced },
+                      { value: "very-healthy", label: t.nut_very_healthy },
+                      { value: UNKNOWN, label: t.dont_know },
                     ]}
                   />
                 </Field>
-                <Field label="Sleep per night" icon={<Moon className="h-4 w-4 text-primary" />}>
+                <Field label={t.sleep} icon={<Moon className="h-4 w-4 text-primary" />}>
                   <SelectField
                     value={form.sleep}
                     onChange={(v) => update("sleep", v as Sleep)}
                     options={[
-                      { value: "<7", label: "Less than 7 hours" },
-                      { value: "7-8", label: "7–8 hours" },
-                      { value: "8-9", label: "8–9 hours" },
-                      { value: "9+", label: "9+ hours" },
-                      { value: UNKNOWN, label: "I don't know" },
+                      { value: "<7", label: t.sleep_lt7 },
+                      { value: "7-8", label: t.sleep_7_8 },
+                      { value: "8-9", label: t.sleep_8_9 },
+                      { value: "9+", label: t.sleep_9p },
+                      { value: UNKNOWN, label: t.dont_know },
                     ]}
                   />
                 </Field>
-                <Field label="Exercise / sports" icon={<Dumbbell className="h-4 w-4 text-primary" />}>
+                <Field label={t.exercise} icon={<Dumbbell className="h-4 w-4 text-primary" />}>
                   <SelectField
                     value={form.exercise}
                     onChange={(v) => update("exercise", v as Exercise)}
                     options={[
-                      { value: "none", label: "Not active" },
-                      { value: "light", label: "Light (1–2 days/week)" },
-                      { value: "moderate", label: "Moderate (3–5 days/week)" },
-                      { value: "very", label: "Very active (6+ days/week)" },
-                      { value: UNKNOWN, label: "I don't know" },
+                      { value: "none", label: t.ex_none },
+                      { value: "light", label: t.ex_light },
+                      { value: "moderate", label: t.ex_moderate },
+                      { value: "very", label: t.ex_very },
+                      { value: UNKNOWN, label: t.dont_know },
                     ]}
                   />
                 </Field>
                 <Field
-                  label="Chronic illness?"
+                  label={t.chronic}
                   icon={<HeartPulse className="h-4 w-4 text-primary" />}
                 >
                   <YesNoSelect
                     value={form.chronicIllness}
                     onChange={(v) => update("chronicIllness", v)}
+                    t={t}
                   />
                 </Field>
-                <Field label="Born preterm?" icon={<Baby className="h-4 w-4 text-primary" />}>
-                  <YesNoSelect value={form.preterm} onChange={(v) => update("preterm", v)} />
+                <Field label={t.preterm} icon={<Baby className="h-4 w-4 text-primary" />}>
+                  <YesNoSelect value={form.preterm} onChange={(v) => update("preterm", v)} t={t} />
                 </Field>
                 <Field
-                  label="Mother smoked during pregnancy?"
+                  label={t.smoking}
                   icon={<Cigarette className="h-4 w-4 text-primary" />}
                 >
                   <YesNoSelect
                     value={form.smokingPregnancy}
                     onChange={(v) => update("smokingPregnancy", v)}
+                    t={t}
                   />
                 </Field>
                 <Field
-                  label="Any hormone treatment?"
+                  label={t.hormones}
                   icon={<Pill className="h-4 w-4 text-primary" />}
                 >
                   <YesNoSelect
                     value={form.hormoneTreatment}
                     onChange={(v) => update("hormoneTreatment", v)}
+                    t={t}
                   />
                 </Field>
               </div>
             </Section>
 
-            {error && (
+            {errorKey && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground">
-                {error}
+                {errorKey === "age" ? t.err_age : t.err_height}
               </div>
             )}
 
@@ -783,7 +803,7 @@ function Index() {
                 className="w-full gap-2 bg-gradient-to-r from-primary to-accent font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 sm:w-auto"
               >
                 <Sparkles className="h-4 w-4" />
-                Estimate my height
+                {t.estimate_btn}
               </Button>
               <Button
                 type="button"
@@ -793,7 +813,7 @@ function Index() {
                 className="w-full gap-2 sm:w-auto"
               >
                 <RotateCcw className="h-4 w-4" />
-                Start over
+                {t.reset_btn}
               </Button>
             </div>
           </CardContent>
@@ -804,10 +824,10 @@ function Index() {
             <Card className="overflow-hidden border border-primary/30 bg-gradient-to-br from-card to-secondary/40 shadow-2xl">
               <CardHeader className="pb-4">
                 <CardTitle className="text-xl text-card-foreground sm:text-2xl">
-                  Your estimated adult height
+                  {t.result_title}
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Based on everything you told us.
+                  {t.result_desc}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -816,7 +836,7 @@ function Index() {
                     {formatHeight(result.estimate, form.unit)}
                   </span>
                   <span className="text-sm font-medium text-muted-foreground sm:text-base">
-                    likely range: {formatHeight(result.min, form.unit)} —{" "}
+                    {t.likely_range} {formatHeight(result.min, form.unit)} —{" "}
                     {formatHeight(result.max, form.unit)}
                   </span>
                 </div>
@@ -836,13 +856,18 @@ function Index() {
 
                 <div className="rounded-lg border border-border bg-background/40 p-4 text-sm text-muted-foreground">
                   <p>
-                    <strong className="text-foreground">Remember:</strong> this is a personalized estimate, not a medical prediction.
+                    <strong className="text-foreground">{t.remember_label}</strong>
+                    {t.remember_text}
                   </p>
                   <p className="mt-2">
-                    It combines the <strong className="text-foreground">mid-parental height (Tanner method)</strong>, your current growth rate, and basic anthropometric rules like arm span and foot length.
+                    {t.method_text_pre}
+                    <strong className="text-foreground">{t.method_text_strong}</strong>
+                    {t.method_text_post}
                   </p>
                   <p className="mt-2">
-                    The most important inputs are <strong className="text-foreground">age, gender, parents' heights, current height, and recent yearly growth</strong>.
+                    {t.important_pre}
+                    <strong className="text-foreground">{t.important_strong}</strong>
+                    {t.important_post}
                   </p>
                 </div>
               </CardContent>
@@ -854,6 +879,7 @@ function Index() {
     </main>
   );
 }
+
 
 /* ---------- small UI helpers ---------- */
 
@@ -961,19 +987,22 @@ function SelectField({
 function YesNoSelect({
   value,
   onChange,
+  t,
 }: {
   value: YesNoUnknown;
   onChange: (v: YesNoUnknown) => void;
+  t: Dict;
 }) {
   return (
     <SelectField
       value={value}
       onChange={(v) => onChange(v as YesNoUnknown)}
       options={[
-        { value: "no", label: "No" },
-        { value: "yes", label: "Yes" },
-        { value: UNKNOWN, label: "I don't know" },
+        { value: "no", label: t.no },
+        { value: "yes", label: t.yes },
+        { value: UNKNOWN, label: t.dont_know },
       ]}
     />
   );
 }
+
