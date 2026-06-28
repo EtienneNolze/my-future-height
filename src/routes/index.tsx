@@ -844,9 +844,6 @@ function Index() {
           </div>
         )}
 
-        <p className="mt-10 text-center text-xs text-muted-foreground">
-          Not medical advice. For health concerns, talk to a pediatrician or doctor.
-        </p>
       </div>
     </main>
   );
