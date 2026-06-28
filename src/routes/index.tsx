@@ -161,7 +161,7 @@ function formatHeight(cm: number, unit: Unit): string {
 function ethnicityAdjust(eth: Ethnicity, _gender: Gender): number {
   switch (eth) {
     case "european":
-      return male ? 1 : 1;
+      return 1;
     case "east-asian":
       return -1;
     case "south-asian":
@@ -580,15 +580,32 @@ function Index() {
                   />
                 </Field>
                 <Field
-                  label="Foot length"
+                  label="Shoe size"
                   icon={<Footprints className="h-4 w-4 text-primary" />}
+                  hint="Foot length is estimated from your shoe size"
                 >
-                  <NumberWithSuffix
-                    value={form.footLength}
-                    onChange={(v) => update("footLength", v)}
-                    suffix={lenUnit}
-                    placeholder="optional"
-                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <NumberWithSuffix
+                        value={form.shoeSize}
+                        onChange={(v) => update("shoeSize", v)}
+                        suffix={form.shoeSystem === "eu" ? "EU" : form.shoeSystem === "uk" ? "UK" : "US"}
+                        placeholder="optional"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <SelectField
+                        value={form.shoeSystem}
+                        onChange={(v) => update("shoeSystem", v as ShoeSystem)}
+                        options={[
+                          { value: "eu", label: "EU" },
+                          { value: "uk", label: "UK" },
+                          { value: "us-men", label: "US (men)" },
+                          { value: "us-women", label: "US (women)" },
+                        ]}
+                      />
+                    </div>
+                  </div>
                 </Field>
                 <Field
                   label="Head circumference"
