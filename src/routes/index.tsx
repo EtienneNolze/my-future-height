@@ -987,19 +987,22 @@ function SelectField({
 function YesNoSelect({
   value,
   onChange,
+  t,
 }: {
   value: YesNoUnknown;
   onChange: (v: YesNoUnknown) => void;
+  t: Dict;
 }) {
   return (
     <SelectField
       value={value}
       onChange={(v) => onChange(v as YesNoUnknown)}
       options={[
-        { value: "no", label: "No" },
-        { value: "yes", label: "Yes" },
-        { value: UNKNOWN, label: "I don't know" },
+        { value: "no", label: t.no },
+        { value: "yes", label: t.yes },
+        { value: UNKNOWN, label: t.dont_know },
       ]}
     />
   );
 }
+
