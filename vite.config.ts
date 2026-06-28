@@ -13,6 +13,6 @@ export default defineConfig({
     server: { entry: "server" },
   },
   nitro: {
-    preset: process.env.RENDER ? "node-server" : "cloudflare-module",
+    defaultPreset: process.env.RENDER ? "node-server" : "cloudflare-module",
   },
 });
