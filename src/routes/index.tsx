@@ -111,7 +111,7 @@ interface FormState {
 const initialForm: FormState = {
   unit: "cm",
   age: "",
-  gender: "unknown",
+  gender: "boy",
   ethnicity: "unknown",
   momHeight: "",
   dadHeight: "",
@@ -123,7 +123,8 @@ const initialForm: FormState = {
   armSpan: "",
   shoulderWidth: "",
   handLength: "",
-  footLength: "",
+  shoeSize: "",
+  shoeSystem: "eu",
   headCircumference: "",
   spurtAge: "",
   stillGrowing: "unknown",
@@ -157,9 +158,7 @@ function formatHeight(cm: number, unit: Unit): string {
   return `${ft} ft ${inches} in`;
 }
 
-function ethnicityAdjust(eth: Ethnicity, gender: Gender): number {
-  // Tiny shift around 0; population-average tendencies
-  const male = gender !== "girl";
+function ethnicityAdjust(eth: Ethnicity, _gender: Gender): number {
   switch (eth) {
     case "european":
       return male ? 1 : 1;
@@ -265,7 +264,7 @@ function estimateAdultHeight(form: FormState): {
 
   // Optional body-measurement hints
   const armSpanCm = toCm(form.armSpan, unit);
-  const footLenCm = toCm(form.footLength, unit);
+  const footLenCm = shoeSizeToFootCm(form.shoeSize, form.shoeSystem);
   const measurementEstimates: number[] = [];
   if (armSpanCm > 80) {
     // Arm span ≈ adult height
@@ -307,7 +306,7 @@ function estimateAdultHeight(form: FormState): {
   range += Math.max(0, 16 - age) * 0.35;
   if (momCm <= 0) range += 2;
   if (dadCm <= 0) range += 2;
-  if (gender === "unknown") range += 1.5;
+  
 
   return {
     result: { estimate: base, min: base - range, max: base + range },
@@ -344,7 +343,7 @@ function Index() {
           armSpan: convert(prev.armSpan),
           shoulderWidth: convert(prev.shoulderWidth),
           handLength: convert(prev.handLength),
-          footLength: convert(prev.footLength),
+          
           headCircumference: convert(prev.headCircumference),
           yearlyGrowth: convert(prev.yearlyGrowth),
         };
