@@ -90,7 +90,8 @@ interface FormState {
   armSpan: string;
   shoulderWidth: string;
   handLength: string;
-  footLength: string;
+  shoeSize: string;
+  shoeSystem: ShoeSystem;
   headCircumference: string;
   // Development
   spurtAge: string;
