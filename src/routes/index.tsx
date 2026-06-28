@@ -12,7 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUp, RotateCcw, Ruler, Activity, User, Users, Sparkles } from "lucide-react";
+import {
+  ArrowUp,
+  RotateCcw,
+  Ruler,
+  Activity,
+  User,
+  Users,
+  Sparkles,
+  Moon,
+  Dumbbell,
+  Apple,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -21,13 +32,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Answer a few quick questions about your age, current height, parents' heights, and recent growth to get a fun estimate of your adult height.",
+          "Answer a few quick questions about your age, current height, parents' heights, recent growth, sleep, exercise, and nutrition to get a fun estimate of your adult height.",
       },
       { property: "og:title", content: "GrowScope — How Tall Will You Be?" },
       {
         property: "og:description",
         content:
-          "Answer a few quick questions about your age, current height, parents' heights, and recent growth to get a fun estimate of your adult height.",
+          "Answer a few quick questions about your age, current height, parents' heights, recent growth, sleep, exercise, and nutrition to get a fun estimate of your adult height.",
       },
     ],
   }),
@@ -36,6 +47,9 @@ export const Route = createFileRoute("/")({
 
 type Unit = "cm" | "ft";
 type Gender = "boy" | "girl";
+type Sleep = "<7" | "7-8" | "8-9" | "9+";
+type Exercise = "none" | "light" | "moderate" | "very";
+type Nutrition = "needs-work" | "okay" | "balanced" | "very-healthy";
 
 interface HeightFtIn {
   ft: string;
@@ -54,6 +68,9 @@ interface FormState {
   dadHeightFt: HeightFtIn;
   yearlyGrowthCm: string;
   yearlyGrowthIn: string;
+  sleep: Sleep;
+  exercise: Exercise;
+  nutrition: Nutrition;
 }
 
 const EMPTY_FT: HeightFtIn = { ft: "", in: "" };
@@ -70,6 +87,9 @@ const initialForm: FormState = {
   dadHeightFt: { ...EMPTY_FT },
   yearlyGrowthCm: "",
   yearlyGrowthIn: "",
+  sleep: "7-8",
+  exercise: "light",
+  nutrition: "okay",
 };
 
 function ftInToCm(ft: string, inch: string): number {
@@ -98,6 +118,56 @@ function formatInches(cm: number): string {
   return String(inches);
 }
 
+function lifestyleAdjustment(sleep: Sleep, exercise: Exercise, nutrition: Nutrition): number {
+  let adjustment = 0;
+
+  switch (sleep) {
+    case "<7":
+      adjustment -= 0.75;
+      break;
+    case "7-8":
+      adjustment += 0;
+      break;
+    case "8-9":
+    case "9+":
+      adjustment += 0.5;
+      break;
+  }
+
+  switch (exercise) {
+    case "none":
+      adjustment -= 0.5;
+      break;
+    case "light":
+      adjustment += 0;
+      break;
+    case "moderate":
+      adjustment += 0.5;
+      break;
+    case "very":
+      adjustment += 0.75;
+      break;
+  }
+
+  switch (nutrition) {
+    case "needs-work":
+      adjustment -= 0.75;
+      break;
+    case "okay":
+      adjustment += 0;
+      break;
+    case "balanced":
+      adjustment += 0.5;
+      break;
+    case "very-healthy":
+      adjustment += 0.75;
+      break;
+  }
+
+  // Keep the lifestyle effect small and encouraging
+  return Math.max(-2, Math.min(2, adjustment));
+}
+
 function estimateAdultHeight(
   gender: Gender,
   age: number,
@@ -105,6 +175,9 @@ function estimateAdultHeight(
   momCm: number,
   dadCm: number,
   yearlyGrowthCm: number,
+  sleep: Sleep,
+  exercise: Exercise,
+  nutrition: Nutrition,
 ): { estimate: number; min: number; max: number } {
   // Mid-parental height (target adult height from genetics)
   const geneticTarget = gender === "boy" ? (momCm + dadCm + 13) / 2 : (momCm + dadCm - 13) / 2;
@@ -142,7 +215,8 @@ function estimateAdultHeight(
   else if (age >= 11) geneticWeight = 0.6;
   else if (age >= 8) geneticWeight = 0.65;
 
-  const estimate = geneticWeight * geneticTarget + (1 - geneticWeight) * growthProjection;
+  const baseEstimate = geneticWeight * geneticTarget + (1 - geneticWeight) * growthProjection;
+  const estimate = baseEstimate + lifestyleAdjustment(sleep, exercise, nutrition);
 
   // Uncertainty is larger for younger users and for users without a recent growth number
   const baseUncertainty = yearlyGrowthCm > 0 ? 6.5 : 8.5;
@@ -286,6 +360,9 @@ function Index() {
         momHeightCm,
         dadHeightCm,
         yearlyGrowthCm,
+        form.sleep,
+        form.exercise,
+        form.nutrition,
       ),
     );
   }
@@ -616,6 +693,80 @@ function Index() {
               </div>
             </div>
 
+            {/* Lifestyle questions */}
+            <div className="border-t border-border pt-6">
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Lifestyle habits
+              </h3>
+              <div className="grid gap-6 sm:grid-cols-3">
+                {/* Sleep */}
+                <div className={inputWrapper}>
+                  <Label htmlFor="sleep" className="flex items-center gap-2">
+                    <Moon className="h-4 w-4 text-primary" />
+                    Sleep per night
+                  </Label>
+                  <Select
+                    value={form.sleep}
+                    onValueChange={(value) => updateField("sleep", value as Sleep)}
+                  >
+                    <SelectTrigger id="sleep" className="bg-background/50">
+                      <SelectValue placeholder="Select sleep" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="<7">Less than 7 hours</SelectItem>
+                      <SelectItem value="7-8">7–8 hours</SelectItem>
+                      <SelectItem value="8-9">8–9 hours</SelectItem>
+                      <SelectItem value="9+">9+ hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Exercise */}
+                <div className={inputWrapper}>
+                  <Label htmlFor="exercise" className="flex items-center gap-2">
+                    <Dumbbell className="h-4 w-4 text-primary" />
+                    Exercise / sports
+                  </Label>
+                  <Select
+                    value={form.exercise}
+                    onValueChange={(value) => updateField("exercise", value as Exercise)}
+                  >
+                    <SelectTrigger id="exercise" className="bg-background/50">
+                      <SelectValue placeholder="Select activity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not active</SelectItem>
+                      <SelectItem value="light">Light (1–2 days/week)</SelectItem>
+                      <SelectItem value="moderate">Moderate (3–5 days/week)</SelectItem>
+                      <SelectItem value="very">Very active (6+ days/week)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Nutrition */}
+                <div className={inputWrapper}>
+                  <Label htmlFor="nutrition" className="flex items-center gap-2">
+                    <Apple className="h-4 w-4 text-primary" />
+                    Nutrition
+                  </Label>
+                  <Select
+                    value={form.nutrition}
+                    onValueChange={(value) => updateField("nutrition", value as Nutrition)}
+                  >
+                    <SelectTrigger id="nutrition" className="bg-background/50">
+                      <SelectValue placeholder="Select nutrition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="needs-work">Needs work</SelectItem>
+                      <SelectItem value="okay">Okay</SelectItem>
+                      <SelectItem value="balanced">Balanced</SelectItem>
+                      <SelectItem value="very-healthy">Very healthy</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
             {error && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground">
                 {error}
@@ -655,7 +806,7 @@ function Index() {
                   Your estimated adult height
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Based on your family heights, age, and recent growth.
+                  Based on your family heights, age, recent growth, and lifestyle habits.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
