@@ -838,6 +838,9 @@ function Index() {
                   <p>
                     <strong className="text-foreground">Remember:</strong> this is a personalized estimate, not a medical prediction.
                   </p>
+                  <p className="mt-2">
+                    It combines the <strong className="text-foreground">mid-parental height (Tanner method)</strong>, your current growth rate, and basic anthropometric rules like arm span and foot length.
+                  </p>
                 </div>
               </CardContent>
             </Card>
