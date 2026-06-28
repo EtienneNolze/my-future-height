@@ -12,7 +12,12 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  nitro: {
-    preset: process.env.RENDER ? "node-server" : "cloudflare-module",
-  },
+  nitro: process.env.RENDER
+    ? {
+        preset: "node-server",
+        output: { dir: "dist", serverDir: "dist/server", publicDir: "dist/client" },
+      }
+    : {
+        preset: "cloudflare-module",
+      },
 });
