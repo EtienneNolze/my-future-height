@@ -1,10 +1,10 @@
-export type Lang = "en" | "de" | "es" | "fr";
+export type Lang = "de" | "fr" | "en" | "es";
 
 export const LANG_LABELS: Record<Lang, string> = {
-  en: "EN",
   de: "DE",
-  es: "ES",
   fr: "FR",
+  en: "EN",
+  es: "ES",
 };
 
 export interface Dict {
