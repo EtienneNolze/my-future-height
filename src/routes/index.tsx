@@ -393,7 +393,7 @@ function Index() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
             Answer as many questions as you can — anything you don't know, just pick
-            "I don't know". The more you fill in, the better the estimate.
+            "I don't know". The more you fill in, the more accurate the estimate.
           </p>
         </div>
 
